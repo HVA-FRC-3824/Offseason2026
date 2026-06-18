@@ -1,0 +1,16 @@
+// Copyright (c) 2026-2027 Jackson Case
+// http://github.com/NO-skcaj
+//
+// Use of this source code is governed by an MIT-style license that can be found in the LICENSE file at
+// the root directory of this project.
+
+package frc.o2026.subsystems.intake;
+
+import edu.wpi.first.units.measure.Angle;
+
+public interface IntakeIO {
+
+  public void setPos(Angle angle);
+
+  public Angle getPos();
+}

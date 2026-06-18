@@ -1,0 +1,65 @@
+// Copyright (c) 2026-2027 Jackson Case
+// http://github.com/NO-skcaj
+//
+// Use of this source code is governed by an MIT-style license that can be found in the LICENSE file at
+// the root directory of this project.
+
+package frc.o2026;
+
+import com.pathplanner.lib.commands.PathfindingCommand;
+import edu.wpi.first.wpilibj.TimedRobot;
+import edu.wpi.first.wpilibj2.command.Command;
+import edu.wpi.first.wpilibj2.command.CommandScheduler;
+import frc.lib.hardware.ctre.OrchestraOrchestrator;
+import frc.lib.hardware.ctre.OrchestraOrchestrator.Song;
+import frc.lib.rebuilt.FuelSim;
+import org.littletonrobotics.junction.Logger;
+import org.littletonrobotics.junction.networktables.NT4Publisher;
+
+public class Robot extends TimedRobot {
+  private Command m_autonomousCommand;
+
+  private final RobotContainer m_robotContainer;
+
+  public Robot() {
+
+    m_robotContainer = new RobotContainer();
+    Logger.addDataReceiver(new NT4Publisher());
+    Logger.start();
+
+    OrchestraOrchestrator.playSong(Song.GymLeader);
+  }
+
+  @Override
+  public void robotInit() {
+
+    CommandScheduler.getInstance()
+        .schedule(PathfindingCommand.warmupCommand(), m_robotContainer.getInit());
+  }
+
+  @Override
+  public void robotPeriodic() {
+    CommandScheduler.getInstance().run();
+  }
+
+  @Override
+  public void autonomousInit() {
+    m_autonomousCommand = m_robotContainer.getAuto();
+
+    if (m_autonomousCommand != null) {
+      CommandScheduler.getInstance().schedule(m_autonomousCommand);
+    }
+  }
+
+  @Override
+  public void simulationPeriodic() {
+    FuelSim.getInstance().updateSim();
+  }
+
+  @Override
+  public void teleopInit() {
+    if (m_autonomousCommand != null) {
+      m_autonomousCommand.cancel();
+    }
+  }
+}

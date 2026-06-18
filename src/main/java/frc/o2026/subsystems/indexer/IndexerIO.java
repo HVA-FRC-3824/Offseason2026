@@ -1,0 +1,22 @@
+// Copyright (c) 2026-2027 Jackson Case
+// http://github.com/NO-skcaj
+//
+// Use of this source code is governed by an MIT-style license that can be found in the LICENSE file at
+// the root directory of this project.
+
+package frc.o2026.subsystems.indexer;
+
+import edu.wpi.first.units.measure.AngularVelocity;
+
+public interface IndexerIO {
+
+  public void setBelts(AngularVelocity indexerVelocity);
+
+  public void setKicker(AngularVelocity kickerVelocity);
+
+  public void brakeMotors();
+
+  public AngularVelocity getIndexerVelocity();
+
+  public AngularVelocity getKickerVelocity();
+}

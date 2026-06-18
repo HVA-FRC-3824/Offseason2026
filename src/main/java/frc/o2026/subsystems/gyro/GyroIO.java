@@ -1,0 +1,19 @@
+// Copyright (c) 2026-2027 Jackson Case
+// http://github.com/NO-skcaj
+//
+// Use of this source code is governed by an MIT-style license that can be found in the LICENSE file at
+// the root directory of this project.
+
+package frc.o2026.subsystems.gyro;
+
+import edu.wpi.first.math.geometry.Rotation2d;
+import edu.wpi.first.units.measure.AngularVelocity;
+
+public interface GyroIO {
+
+  public Rotation2d getGyroRotation();
+
+  public AngularVelocity getGyroAngularVelocity();
+
+  public void reset();
+}
