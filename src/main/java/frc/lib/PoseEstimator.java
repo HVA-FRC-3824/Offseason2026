@@ -1,5 +1,5 @@
-// Copyright (c) 2026-2027 Jackson Case
-// http://github.com/NO-skcaj
+// Copyright (c) 2026-2027 FRC 3824 HVA RoHawktics
+// http://github.com/HVA-FRC-3824
 //
 // Use of this source code is governed by an MIT-style license that can be found in the LICENSE file at
 // the root directory of this project.
@@ -38,7 +38,7 @@ public class PoseEstimator {
   private Rotation2d lastGyroAngle = null;
 
   /**
-   * Basic constructor — use {@link #addDriveData(double, Twist2d)} to feed odometry. If you want
+   * Basic constructor use {@link #addDriveData(double, Twist2d)} to feed odometry. If you want
    * swerve module delta support, use the other constructor.
    */
   public PoseEstimator(Matrix<N3, N1> stateStdDevs) {
@@ -139,7 +139,7 @@ public class PoseEstimator {
               modulePositions[i].angle);
     }
 
-    // 2. Convert module deltas → chassis Twist2d via inverse kinematics.
+    // 2. Convert module deltas  chassis Twist2d via inverse kinematics.
     Twist2d twist = kinematics.toTwist2d(deltas);
 
     // 3. Override the rotational component with the (much more accurate) gyro delta.
@@ -205,7 +205,7 @@ public class PoseEstimator {
       var prevUpdate = updates.floorEntry(timestamp);
       var nextUpdate = updates.ceilingEntry(timestamp);
       if (prevUpdate == null || nextUpdate == null) {
-        return; // Outside the range of existing drive data — discard.
+        return; // Outside the range of existing drive data  discard.
       }
 
       double alpha =

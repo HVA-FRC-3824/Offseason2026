@@ -1,9 +1,3 @@
-// Copyright (c) 2026-2027 Jackson Case
-// http://github.com/NO-skcaj
-//
-// Use of this source code is governed by an MIT-style license that can be found in the LICENSE file at
-// the root directory of this project.
-
 package frc.lib.rebuilt;
 
 // https://github.com/hammerheads5000/FuelSim
@@ -970,7 +964,7 @@ public class FuelSim {
    * spawned just above the entry height with enough downward velocity to cross the threshold in the
    * first physics sub-step, guaranteeing a score. Returns {@code true} if a fuel was available.
    *
-   * <p>Red hub center: ({@code FIELD_LENGTH - 4.61}, {@code FIELD_WIDTH / 2}) ≈ (11.90, 4.02) Entry
+   * <p>Red hub center: ({@code FIELD_LENGTH - 4.61}, {@code FIELD_WIDTH / 2}) = (11.90, 4.02) Entry
    * height: 1.83 m, entry radius: 0.56 m.
    */
   public boolean shootFuelIntoHub(Alliance alliance) {

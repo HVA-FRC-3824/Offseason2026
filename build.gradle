@@ -118,14 +118,14 @@ spotless {
     java {
         target fileTree(".") {
             include "src/**/*.java"
-            exclude "**/build/**", "**/build-*/**"
+            exclude "**/build/**", "**/build-*/**", "**/rebuilt/**"
         }
         toggleOffOn()
         googleJavaFormat()
         removeUnusedImports()
         trimTrailingWhitespace()
         endWithNewline()
-        licenseHeader("// Copyright (c) 2026-2027 Jackson Case\n// http://github.com/NO-skcaj\n//\n// Use of this source code is governed by an MIT-style license that can be found in the LICENSE file at\n// the root directory of this project.\n\n")
+        licenseHeader("// Copyright (c) 2026-2027 FRC 3824 HVA RoHawktics\n// http://github.com/HVA-FRC-3824\n//\n// Use of this source code is governed by an MIT-style license that can be found in the LICENSE file at\n// the root directory of this project.\n\n")
     }
     json {
         target fileTree(".") {

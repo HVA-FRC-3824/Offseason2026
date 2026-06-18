@@ -13,74 +13,6 @@ import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.geometry.Translation3d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 
-/**
- * RobotBumpSim — standalone robot-bump physics simulation for MapleSim.
- *
- * <h2>What this class does</h2>
- *
- * <p>Simulates the robot's 3D pose (Z height, pitch, and roll) as it drives over the raised bumps
- * on the 2026 FRC REBUILT field. It also implements a frictionless-slide model that prevents the
- * robot from "ghosting" through a bump when it lacks the speed to crest it.
- *
- * <h2>How it works</h2>
- *
- * <ul>
- *   <li>Four swerve module contact points are tracked independently in the XZ plane.
- *   <li>When any module first touches a bump's ascending face the sim enters <em>ramp mode</em>: it
- *       captures the robot's current field-X velocity ({@code simXVel}) and absolute field-X
- *       position ({@code simXPos}), then owns them for the duration of the crossing attempt.
- *   <li>While on the ramp, only gravity acts along X (frictionless surface). If {@code simXVel}
- *       decays to zero before the peak the robot slides back to flat ground.
- *   <li>The robot exits ramp mode when it either backs off (all module Z ≈ 0) or successfully
- *       crosses over the peak (modules come back to flat ground on the far side).
- *   <li>A diagonal approach reduces effective deceleration via {@code contactFactor = |cos(2 *
- *       robotYaw)|}, making 45° crossings easier.
- * </ul>
- *
- * <p>Minimum crossing speed: {@code sqrt(2·g·h) ≈ sqrt(2·9.81·0.165) ≈ 1.80 m/s}.
- *
- * <h2>Quick-start integration with MapleSim</h2>
- *
- * <pre>{@code
- * // 1. Construct once, typically in startSimThread() alongside your MapleSim drivetrain.
- * RobotBumpSim robotBumpSim = new RobotBumpSim(drivetrain.getModuleLocations());
- *
- * // 2. Call every simulationPeriodic() AFTER MapleSim has stepped.
- * Pose2d simPose = mapleSimDrive.getSimulatedDriveTrainPose();
- * ChassisSpeeds fieldRelativeSpeeds = mapleSimSwerveDrivetrain.mapleSimDrive.getDriveTrainSimulatedChassisSpeedsFieldRelative();
- *
- * // subticks should match the number of physics sub-steps you pass to your ball/object sim.
- * // A value of 5 works well for a 20 ms loop (4 ms sub-steps).
- * Pose3d simPose3d = robotBumpSim.update(simPose, fieldSpeeds, subticks);
- *
- * // 3. When on the ramp, override MapleSim's pose so the robot physically slides back
- * //    instead of the correction being purely visual.
- * if (robotBumpSim.isOnRamp()) {
- *     mapleSimDrive.setSimulationWorldPose(robotBumpSim.getSimWorldPose(simPose));
- * }
- *
- * // 4. Log or visualise the 3D pose (e.g. with AdvantageScope).
- * Logger.recordOutput("Drive/Pose3d", simPose3d);
- * }</pre>
- *
- * <h2>Tunable constants</h2>
- *
- * <ul>
- *   <li>{@link #WHEEL_RADIUS} — effective contact radius of a wheel against the ramp surface
- *       (metres). Increase this to make the robot appear to "float" higher above the bump.
- *   <li>{@link #CHASSIS_HEIGHT} — offset from the average module-contact Z to the robot body
- *       origin. Set to your chassis clearance height if you want a visually accurate robot body Z.
- *   <li>{@link #BUMP_COR} — coefficient of restitution for vertical collisions with the bump. 0 =
- *       perfectly inelastic (no bounce), 1 = perfectly elastic.
- * </ul>
- *
- * <h2>Field geometry</h2>
- *
- * <p>The bump geometry is encoded as XZ line segments with Y-range guards. Each bump has two
- * segments per side (ascending face + descending face) at X positions symmetric about field centre.
- * See {@link #BUMP_LINE_STARTS} / {@link #BUMP_LINE_ENDS} for the raw coordinates. All positions
- * are in metres, origin at the Blue Alliance driver-station corner.
- */
 public class RobotBumpSim {
 
   // -------------------------------------------------------------------------
@@ -99,72 +31,40 @@ public class RobotBumpSim {
   /** Full width of the REBUILT field (metres). */
   private static final double FIELD_WIDTH = 8.04;
 
-  /**
-   * Start points of the eight bump XZ line segments (four per alliance, ascending + descending).
-   *
-   * <p>Each {@link Translation3d} stores {@code (fieldX, yMin, fieldZ)}: the world-X start of the
-   * ramp face, the minimum field-Y at which this segment is present, and the ramp Z at that X. The
-   * companion {@link #BUMP_LINE_ENDS} array stores the end point including the maximum Y.
-   *
-   * <p>Indices 0–3 are the Blue-side bump (near X ≈ 3.96–5.18 m); indices 4–7 are the Red-side bump
-   * (near X ≈ FIELD_LENGTH−5.18 – FIELD_LENGTH−3.96 m).
-   */
   static final Translation3d[] BUMP_LINE_STARTS = {
-    // Blue bump — ascending faces (Z rises from 0 → 0.165 m)
     new Translation3d(3.96, 1.57, 0),
     new Translation3d(3.96, FIELD_WIDTH / 2 + 0.60, 0),
-    // Blue bump — descending faces (Z falls from 0.165 → 0 m)
     new Translation3d(4.61, 1.57, 0.165),
     new Translation3d(4.61, FIELD_WIDTH / 2 + 0.60, 0.165),
-    // Red bump — ascending faces
     new Translation3d(FIELD_LENGTH - 5.18, 1.57, 0),
     new Translation3d(FIELD_LENGTH - 5.18, FIELD_WIDTH / 2 + 0.60, 0),
-    // Red bump — descending faces
     new Translation3d(FIELD_LENGTH - 4.61, 1.57, 0.165),
     new Translation3d(FIELD_LENGTH - 4.61, FIELD_WIDTH / 2 + 0.60, 0.165),
   };
 
-  /**
-   * End points of the eight bump XZ line segments.
-   *
-   * <p>Each {@link Translation3d} stores {@code (fieldX, yMax, fieldZ)}: the world-X end of the
-   * ramp face, the maximum field-Y at which this segment is present, and the ramp Z at that X.
-   */
   static final Translation3d[] BUMP_LINE_ENDS = {
-    // Blue bump — ascending faces
     new Translation3d(4.61, FIELD_WIDTH / 2 - 0.60, 0.165),
     new Translation3d(4.61, FIELD_WIDTH - 1.57, 0.165),
-    // Blue bump — descending faces
     new Translation3d(5.18, FIELD_WIDTH / 2 - 0.60, 0),
     new Translation3d(5.18, FIELD_WIDTH - 1.57, 0),
-    // Red bump — ascending faces
     new Translation3d(FIELD_LENGTH - 4.61, FIELD_WIDTH / 2 - 0.60, 0.165),
     new Translation3d(FIELD_LENGTH - 4.61, FIELD_WIDTH - 1.57, 0.165),
-    // Red bump — descending faces
     new Translation3d(FIELD_LENGTH - 3.96, FIELD_WIDTH / 2 - 0.60, 0),
     new Translation3d(FIELD_LENGTH - 3.96, FIELD_WIDTH - 1.57, 0),
   };
 
-  /** Index of the first bump segment in {@link #BUMP_LINE_STARTS} (inclusive). */
   private static final int BUMP_LINE_FIRST = 0;
 
-  /** Index of the last bump segment in {@link #BUMP_LINE_STARTS} (inclusive). */
   private static final int BUMP_LINE_LAST = BUMP_LINE_STARTS.length - 1;
 
   // -------------------------------------------------------------------------
-  // Tunable physics constants — adjust for your robot
+  // Tunable physics constants  adjust for your robot
   // -------------------------------------------------------------------------
 
-  /** Effective wheel contact radius against the bump surface (metres). */
   private static final double WHEEL_RADIUS = 0.048;
 
-  /** Height offset from the average module-contact Z to the robot-body origin (metres). */
   private static final double CHASSIS_HEIGHT = 0.0;
 
-  /**
-   * Coefficient of restitution for vertical (Z) robot-bump collisions. 0 = perfectly inelastic (no
-   * bounce), 1 = perfectly elastic.
-   */
   private static final double BUMP_COR = 0.15;
 
   /**
@@ -382,8 +282,8 @@ public class RobotBumpSim {
    *   a_X = -g * normalX * normalZ
    * </pre>
    *
-   * Ascending face (normalX &lt; 0, normalZ &gt; 0): a_X &lt; 0 — gravity pulls robot back.<br>
-   * Descending face (normalX &gt; 0, normalZ &gt; 0): a_X &gt; 0 — gravity helps robot forward.
+   * Ascending face (normalX &lt; 0, normalZ &gt; 0): a_X &lt; 0  gravity pulls robot back.<br>
+   * Descending face (normalX &gt; 0, normalZ &gt; 0): a_X &gt; 0  gravity helps robot forward.
    *
    * @param moduleIdx Index of the module (0–3).
    * @param worldX Module's world-X position (metres).
