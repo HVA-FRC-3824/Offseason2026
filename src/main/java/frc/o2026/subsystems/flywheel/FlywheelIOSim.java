@@ -22,13 +22,10 @@ import frc.o2026.Constants;
 import org.ironmaple.simulation.IntakeSimulation;
 import org.ironmaple.simulation.drivesims.SwerveDriveSimulation;
 
-// It shares a name with the wpilibj name FlywheelSim... we fix this
 public class FlywheelIOSim implements FlywheelIO {
   private AngularVelocity m_lastinput = RotationsPerSecond.of(0.0);
 
   private Angle m_simPosTurns = Rotations.of(0.0);
-
-  private int m_offsetIndex = 0;
 
   public final MotorIO m_motor;
   public final FlywheelSim m_motorModel;

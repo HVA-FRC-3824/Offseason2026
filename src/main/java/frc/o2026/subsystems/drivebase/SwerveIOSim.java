@@ -4,19 +4,22 @@
 // Use of this source code is governed by an MIT-style license that can be found in the LICENSE file at
 // the root directory of this project.
 
-package frc.o2026.subsystems.swerve;
+package frc.o2026.subsystems.drivebase;
 
 import static edu.wpi.first.units.Units.Inches;
 
 import edu.wpi.first.math.Matrix;
 import edu.wpi.first.math.geometry.Pose2d;
+import edu.wpi.first.math.geometry.Pose3d;
 import edu.wpi.first.math.geometry.Rotation2d;
+import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.kinematics.SwerveModulePosition;
 import edu.wpi.first.math.kinematics.SwerveModuleState;
 import edu.wpi.first.math.numbers.N1;
 import edu.wpi.first.math.numbers.N3;
 import edu.wpi.first.math.system.plant.DCMotor;
+import frc.lib.rebuilt.RobotBumpSim;
 import frc.o2026.Constants;
 import org.ironmaple.simulation.SimulatedArena;
 import org.ironmaple.simulation.drivesims.COTS;
@@ -60,23 +63,24 @@ public class SwerveIOSim implements SwerveIO {
           new SwerveDriveSimulation(
               driveTrainSimulationConfig, new Pose2d(0, 0, new Rotation2d())));
 
-  public static Rotation2d getGyroYaw() {
-    return m_swerveDriveSimulation.getOdometryEstimatedPose().getRotation();
-  }
+  public RobotBumpSim m_robotBumpSim = new RobotBumpSim(Constants.Chassis.ModulePositions);
 
-  public static Pose2d getPose() {
+  @Override
+  public Pose2d getPose() {
+
     return m_swerveDriveSimulation.getOdometryEstimatedPose();
   }
 
-  public static void setPose(Pose2d pose) {
-    m_swerveDriveSimulation.setSimulationWorldPose(pose);
-    m_swerveDriveSimulation.resetOdometry(pose);
+  @Override
+  public Rotation2d getGyroHeading() {
+    return m_swerveDriveSimulation.getOdometryEstimatedPose().getRotation();
   }
 
   public static void addVisionMeasurement(
       Pose2d visionRobotPoseMeters,
       double timestampSeconds,
       Matrix<N3, N1> visionMeasurementStdDevs) {
+
     m_swerveDriveSimulation.addVisionEstimation(
         visionRobotPoseMeters, timestampSeconds, visionMeasurementStdDevs);
   }
@@ -92,7 +96,6 @@ public class SwerveIOSim implements SwerveIO {
 
   public void driveRobotRelative(ChassisSpeeds speeds) {
 
-    // speeds = ChassisSpeeds.fromRobotRelativeSpeeds(speeds, heading);
     // If the chassis is in x mode, than stay in x mode, ignoring the desired speeds
     if (m_xMode) {
       // Set the module states to x mode
@@ -108,35 +111,70 @@ public class SwerveIOSim implements SwerveIO {
     // Set the desired state for each swerve module
     setModuleStates(desiredStates);
 
-    Logger.runEveryN(1, () -> m_swerveDriveSimulation.periodic());
+    Logger.recordOutput("XMode", m_xMode);
+    Logger.recordOutput("d-speeds", speeds);
+    Logger.recordOutput("d-states", desiredStates);
   }
 
-  public void setModuleStates(SwerveModuleState[] states) {
-    // Set the desired state for each swerve module
-    m_swerveDriveSimulation.runSwerveStates(states);
+  @Override
+  public void setModuleStates(SwerveModuleState[] inputs) {
+
+    m_swerveDriveSimulation.runChassisSpeeds(
+        Constants.Chassis.Kinematics.toChassisSpeeds(
+            new SwerveModuleState[] {inputs[0], inputs[1], inputs[2], inputs[3]}),
+        new Translation2d(),
+        false,
+        true);
   }
 
+  @Override
+  public void periodic() {
+
+    m_swerveDriveSimulation.periodic();
+
+    Pose2d simPose = m_swerveDriveSimulation.getActualPoseInSimulationWorld();
+
+    ChassisSpeeds fieldRelativeSpeeds =
+        m_swerveDriveSimulation.getMeasuredSpeedsFieldRelative(false);
+
+    Pose3d simPose3d = m_robotBumpSim.update(simPose, fieldRelativeSpeeds, 20);
+    if (m_robotBumpSim.isOnRamp()) {
+      m_swerveDriveSimulation.setSimulationWorldPose(
+          m_robotBumpSim.getSimWorldPose(simPose3d.toPose2d()));
+    }
+    Logger.recordOutput("Drive/Pose3d", simPose3d);
+  }
+
+  @Override
   public void resetWheelAnglesToZero() {}
 
+  @Override
   public SwerveModuleState[] getModuleStates() {
     return m_swerveDriveSimulation.getMeasuredStates();
   }
 
+  @Override
   public SwerveModulePosition[] getModulePositions() {
     return m_swerveDriveSimulation.getLatestModulePositions();
   }
 
+  @Override
   public ChassisSpeeds getSpeeds() {
     return Constants.Chassis.Kinematics.toChassisSpeeds(getModuleStates());
   }
 
   public boolean getIsXMode() {
-
     return m_xMode;
   }
 
   public void setIsXMode(boolean xMode) {
-
     m_xMode = xMode;
+  }
+
+  @Override
+  public void resetPose(Pose2d newPos) {
+
+    m_swerveDriveSimulation.setSimulationWorldPose(newPos);
+    m_swerveDriveSimulation.resetOdometry(newPos);
   }
 }

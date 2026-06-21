@@ -12,8 +12,6 @@ import edu.wpi.first.units.measure.Voltage;
 
 public interface MotorIO {
 
-  // Call this in your updateHardwareInputs function
-  // Get the velocity from your motor model (eg FlywheelSim)
   default void simPeriodic(AngularVelocity velocity) {}
 
   void config(MotorConfig config);

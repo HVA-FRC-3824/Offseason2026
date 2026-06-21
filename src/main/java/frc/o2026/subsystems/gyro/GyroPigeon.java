@@ -7,7 +7,7 @@
 package frc.o2026.subsystems.gyro;
 
 import com.ctre.phoenix6.hardware.Pigeon2;
-import edu.wpi.first.math.geometry.Rotation2d;
+import edu.wpi.first.math.geometry.Rotation3d;
 import edu.wpi.first.units.measure.AngularVelocity;
 import frc.o2026.Constants;
 
@@ -20,8 +20,8 @@ public class GyroPigeon implements GyroIO {
   }
 
   @Override
-  public Rotation2d getGyroRotation() {
-    return m_gyro.getRotation2d();
+  public Rotation3d getGyroRotation() {
+    return m_gyro.getRotation3d();
   }
 
   @Override

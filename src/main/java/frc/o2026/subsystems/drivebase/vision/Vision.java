@@ -4,7 +4,7 @@
 // Use of this source code is governed by an MIT-style license that can be found in the LICENSE file at
 // the root directory of this project.
 
-package frc.o2026.subsystems.vision;
+package frc.o2026.subsystems.drivebase.vision;
 
 import edu.wpi.first.apriltag.AprilTagFieldLayout;
 import edu.wpi.first.apriltag.AprilTagFields;
@@ -13,30 +13,28 @@ import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Pose3d;
 import edu.wpi.first.math.numbers.N1;
 import edu.wpi.first.math.numbers.N4;
-import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.o2026.Constants;
 import frc.o2026.Robot;
-import frc.o2026.RobotState;
-import java.util.ArrayList;
-import org.ironmaple.simulation.drivesims.SwerveDriveSimulation;
-import org.littletonrobotics.junction.Logger;
+import java.util.function.Consumer;
 import org.photonvision.simulation.VisionSystemSim;
 
-public class Vision extends SubsystemBase {
+public class Vision {
 
   public static AprilTagFieldLayout fieldAprilTags =
       AprilTagFieldLayout.loadField(AprilTagFields.k2026RebuiltWelded);
 
   private VisionSystemSim visionSim;
 
-  private SwerveDriveSimulation m_swerveSim;
+  private Consumer<VisionData> m_poseEstimatorConsumer;
 
-  private Pose3d m_lastSeenTag = new Pose3d();
+  private int m_lastSeenTag = 0;
 
   public Camera[] cameras =
       new Camera[] {new Camera(Constants.Vision.kCameraName1, Constants.Vision.RobotToCam1)};
 
-  public Vision() {
+  public Vision(Consumer<VisionData> poseEstimatorConsumer) {
+
+    m_poseEstimatorConsumer = poseEstimatorConsumer;
 
     if (Robot.isSimulation()) {
       visionSim = new VisionSystemSim("main");
@@ -48,35 +46,35 @@ public class Vision extends SubsystemBase {
     }
   }
 
-  @Override
-  public void periodic() {
+  public void periodic(Pose2d simRealPos) {
 
-    for (Camera m_camera : cameras)
-      for (VisionData data : m_camera.getMeasurements())
-        RobotState.getInstance().addVisionData(data);
+    for (Camera camera : cameras)
+      for (VisionData data : camera.getMeasurements()) m_poseEstimatorConsumer.accept(data);
 
-    if (Robot.isSimulation()) visionSim.update(RobotState.getInstance().getSimActualPose());
+    // This just checks if the there is a measurement,
+    // then if there are any tags in that measurement
+    // then it takes the first tag of that measurement
+    // and makes that the last seen tag
+    if (cameras[0].getMeasurements().size() > 0) {
+      if (cameras[0].getMeasurements().get(cameras[0].getMeasurements().size() - 1).target().length
+          > 0) {
+
+        m_lastSeenTag =
+            cameras[0].getMeasurements().get(cameras[0].getMeasurements().size() - 1).target()[0];
+      }
+    }
+
+    if (simRealPos != null) visionSim.update(simRealPos);
+  }
+
+  public int getLastSeenTag() {
+
+    return m_lastSeenTag;
   }
 
   public static Pose3d getTagPose(int fiduciary) {
 
     return Constants.Vision.kTagLayout.getTagPose(fiduciary).orElse(new Pose3d());
-  }
-
-  public static record Outputs(ArrayList<VisionData> measurements, Pose2d lastSeenTag) {
-
-    public static Outputs zeroed() {
-
-      return new Outputs(new ArrayList<VisionData>(0), new Pose2d());
-    }
-
-    public void log() {
-
-      if (measurements.size() > 0)
-        Logger.recordOutput(
-            "Vision/measurement", measurements.get(measurements.size() - 1).visionMeasurement());
-      Logger.recordOutput("Vision/Last Seen Tag", lastSeenTag);
-    }
   }
 
   public record VisionData(

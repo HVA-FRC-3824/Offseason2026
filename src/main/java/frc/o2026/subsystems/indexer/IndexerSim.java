@@ -18,6 +18,9 @@ import frc.lib.hardware.ctre.TalonIO;
 import frc.o2026.Constants;
 
 public class IndexerSim implements IndexerIO {
+
+  private boolean m_turnedOn = false;
+
   public MotorIO m_beltMotor;
   public MotorIO m_kickerMotor;
 
@@ -29,6 +32,7 @@ public class IndexerSim implements IndexerIO {
     m_beltMotor =
         new TalonIO(
             Constants.CanIds.IndexerMotorId, Constants.Indexer.BeltConfig, true); // is an X60
+
     m_kickerMotor =
         new TalonIO(Constants.CanIds.KickerMotorId, Constants.Indexer.KickerConfig, false);
 

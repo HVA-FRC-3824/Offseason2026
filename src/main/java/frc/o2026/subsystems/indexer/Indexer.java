@@ -12,6 +12,7 @@ import edu.wpi.first.units.measure.AngularVelocity;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.o2026.Constants;
+import frc.o2026.RobotState;
 
 public class Indexer extends SubsystemBase {
   IndexerIO m_io;
@@ -28,6 +29,7 @@ public class Indexer extends SubsystemBase {
 
     return runOnce(
         () -> {
+          RobotState.getInstance().setSimIndexing(false);
           m_io.brakeMotors();
           m_desiredIndexer = RotationsPerSecond.of(0.0);
           m_desiredKicker = RotationsPerSecond.of(0.0);
@@ -38,6 +40,7 @@ public class Indexer extends SubsystemBase {
 
     return runOnce(
         () -> {
+          RobotState.getInstance().setSimIndexing(true);
           m_io.setBelts(Constants.Indexer.BeltTurnsPerSec);
           m_io.setKicker(Constants.Indexer.KickerWheelTurnsPerSec);
           m_desiredIndexer = Constants.Indexer.BeltTurnsPerSec;
@@ -49,6 +52,7 @@ public class Indexer extends SubsystemBase {
 
     return runOnce(
         () -> {
+          RobotState.getInstance().setSimIndexing(true);
           m_io.setBelts(Constants.Indexer.BeltTurnsPerSec.times(-1.0));
           m_io.setKicker(Constants.Indexer.KickerWheelTurnsPerSec.times(-1.0));
           m_desiredIndexer = Constants.Indexer.BeltTurnsPerSec.times(-1.0);

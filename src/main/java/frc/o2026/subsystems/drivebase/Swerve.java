@@ -4,25 +4,32 @@
 // Use of this source code is governed by an MIT-style license that can be found in the LICENSE file at
 // the root directory of this project.
 
-package frc.o2026.subsystems.swerve;
+package frc.o2026.subsystems.drivebase;
 
 import com.pathplanner.lib.auto.AutoBuilder;
 import com.pathplanner.lib.config.PIDConstants;
 import com.pathplanner.lib.config.RobotConfig;
 import com.pathplanner.lib.controllers.PPHolonomicDriveController;
+import edu.wpi.first.math.controller.PIDController;
+import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Pose3d;
+import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.lib.Alliance;
+import frc.o2026.Constants;
 import frc.o2026.RobotState;
 import java.util.function.Supplier;
+import org.littletonrobotics.junction.Logger;
 
 public class Swerve extends SubsystemBase {
 
   private SwerveIO m_io;
 
   private boolean m_fieldCentricity = true;
+
+  private PIDController m_aimController = new PIDController(1, 0, 0);
 
   public Swerve(SwerveIO io) {
 
@@ -38,8 +45,8 @@ public class Swerve extends SubsystemBase {
 
     // Configure the AutoBuilder
     AutoBuilder.configure(
-        () -> RobotState.getInstance().getPose().toPose2d(),
-        (pose) -> RobotState.getInstance().resetPose(new Pose3d(pose)),
+        () -> m_io.getPose(),
+        (pose) -> m_io.resetPose(pose),
         // ChassisSpeeds supplier. MUST BE ROBOT RELATIVE
         () -> m_io.getSpeeds(),
         // Method that will drive the robot given ROBOT RELATIVE ChassisSpeeds.
@@ -55,6 +62,38 @@ public class Swerve extends SubsystemBase {
         );
   }
 
+  @Override
+  public void periodic() {
+
+    m_io.periodic();
+
+    RobotState.getInstance().setLastMeasuredSpeeds(getChassisSpeeds());
+    RobotState.getInstance().setPoseEst(getPose());
+
+    Logger.recordOutput("Pose", getPose());
+    Logger.recordOutput("Heading", getHeading());
+  }
+
+  public ChassisSpeeds getChassisSpeeds() {
+
+    return Constants.Chassis.Kinematics.toChassisSpeeds(m_io.getModuleStates());
+  }
+
+  public Pose3d getPose() {
+
+    return new Pose3d(m_io.getPose());
+  }
+
+  public Rotation2d getHeading() {
+
+    return m_io.getGyroHeading();
+  }
+
+  public void resetPose(Pose2d pose) {
+
+    m_io.resetPose(pose);
+  }
+
   public Command resetSwerveModules() {
     return runOnce(() -> m_io.resetWheelAnglesToZero()).withName("resetSwerveModules");
   }
@@ -66,13 +105,33 @@ public class Swerve extends SubsystemBase {
               m_fieldCentricity
                   ? ChassisSpeeds.fromFieldRelativeSpeeds(
                       speedsSupplier.get(),
-                      (Alliance.isRed()
-                          ? RobotState.getInstance().getHeading().unaryMinus()
-                          : RobotState.getInstance().getHeading()) // Flip if red
-                      )
+                      (Alliance.isRed() // Flip if red
+                          ? getHeading().unaryMinus()
+                          : getHeading()))
                   : speedsSupplier.get());
         })
         .withName("Drive");
+  }
+
+  public Command aimSOTM(Supplier<ChassisSpeeds> speedsSupplier) {
+
+    return run(() -> {
+          var speeds = speedsSupplier.get();
+          speeds.omegaRadiansPerSecond =
+              m_aimController.calculate(
+                  getHeading().getRadians(),
+                  RobotState.getInstance().getSOTMRotTarget().getRadians());
+
+          m_io.driveRobotRelative(
+              m_fieldCentricity
+                  ? ChassisSpeeds.fromFieldRelativeSpeeds(
+                      speeds,
+                      (Alliance.isRed() // Flip if red
+                          ? getHeading().unaryMinus()
+                          : getHeading()))
+                  : speeds);
+        })
+        .withName("AimSOTM");
   }
 
   public Command fieldCentricityOn() {

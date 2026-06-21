@@ -120,7 +120,6 @@ spotless {
             include "src/**/*.java"
             exclude "**/build/**", "**/build-*/**", "**/rebuilt/**"
         }
-        toggleOffOn()
         googleJavaFormat()
         removeUnusedImports()
         trimTrailingWhitespace()
@@ -132,7 +131,7 @@ spotless {
             include "**/*.json"
             exclude "**/build/**", "**/build-*/**", ".wpilib/**", ".vscode/**"
         }
-        gson().indentWithSpaces(2)
+        gson().indentWithSpaces(1)
     }
     format "misc", {
         target fileTree(".") {
@@ -140,7 +139,7 @@ spotless {
             exclude "**/build/**", "**/build-*/**"
         }
         trimTrailingWhitespace()
-        indentWithSpaces(2)
+        indentWithSpaces(1)
         endWithNewline()
     }
 }

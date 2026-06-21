@@ -6,12 +6,12 @@
 
 package frc.o2026.subsystems.gyro;
 
-import edu.wpi.first.math.geometry.Rotation2d;
+import edu.wpi.first.math.geometry.Rotation3d;
 import edu.wpi.first.units.measure.AngularVelocity;
 
 public interface GyroIO {
 
-  public Rotation2d getGyroRotation();
+  public Rotation3d getGyroRotation();
 
   public AngularVelocity getGyroAngularVelocity();
 

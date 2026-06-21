@@ -4,7 +4,7 @@
 // Use of this source code is governed by an MIT-style license that can be found in the LICENSE file at
 // the root directory of this project.
 
-package frc.o2026.subsystems.swerve;
+package frc.o2026.subsystems.drivebase;
 
 import static edu.wpi.first.units.Units.Degrees;
 import static edu.wpi.first.units.Units.Rotations;

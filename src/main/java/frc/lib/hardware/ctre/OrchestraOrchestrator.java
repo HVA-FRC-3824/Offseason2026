@@ -17,11 +17,11 @@ import org.littletonrobotics.junction.Logger;
 
 public class OrchestraOrchestrator {
 
-  // This is immedietly published
-  private static EnumChooser<Song> m_songPlayer =
-      new EnumChooser<Song>("Song Chooser", Song.GymLeader);
+  private static EnumChooser<Song> m_songPlayer;
 
-  static {
+  public static void sendChooser() {
+
+    m_songPlayer = new EnumChooser<Song>("Song Chooser", Song.GymLeader);
     m_songPlayer.onChange(OrchestraOrchestrator::playSong);
   }
 

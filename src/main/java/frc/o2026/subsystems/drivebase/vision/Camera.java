@@ -4,7 +4,7 @@
 // Use of this source code is governed by an MIT-style license that can be found in the LICENSE file at
 // the root directory of this project.
 
-package frc.o2026.subsystems.vision;
+package frc.o2026.subsystems.drivebase.vision;
 
 import edu.wpi.first.math.Matrix;
 import edu.wpi.first.math.VecBuilder;
@@ -14,7 +14,7 @@ import edu.wpi.first.math.numbers.N1;
 import edu.wpi.first.math.numbers.N4;
 import frc.o2026.Constants;
 import frc.o2026.Robot;
-import frc.o2026.subsystems.vision.Vision.VisionData;
+import frc.o2026.subsystems.drivebase.vision.Vision.VisionData;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;

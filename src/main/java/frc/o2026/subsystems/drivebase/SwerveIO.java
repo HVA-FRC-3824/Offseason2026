@@ -4,8 +4,10 @@
 // Use of this source code is governed by an MIT-style license that can be found in the LICENSE file at
 // the root directory of this project.
 
-package frc.o2026.subsystems.swerve;
+package frc.o2026.subsystems.drivebase;
 
+import edu.wpi.first.math.geometry.Pose2d;
+import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.kinematics.SwerveModulePosition;
 import edu.wpi.first.math.kinematics.SwerveModuleState;
@@ -34,7 +36,15 @@ public interface SwerveIO {
 
   public ChassisSpeeds getSpeeds();
 
+  public Pose2d getPose();
+
+  public void resetPose(Pose2d newPos);
+
   public void setIsXMode(boolean xMode);
 
   public boolean getIsXMode();
+
+  public void periodic();
+
+  public Rotation2d getGyroHeading();
 }

@@ -7,16 +7,17 @@
 package frc.o2026;
 
 import com.pathplanner.lib.commands.PathfindingCommand;
-import edu.wpi.first.wpilibj.TimedRobot;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
 import frc.lib.hardware.ctre.OrchestraOrchestrator;
-import frc.lib.hardware.ctre.OrchestraOrchestrator.Song;
-import frc.lib.rebuilt.FuelSim;
+import frc.lib.rebuilt.BallSim;
+import org.littletonrobotics.junction.LoggedRobot;
 import org.littletonrobotics.junction.Logger;
 import org.littletonrobotics.junction.networktables.NT4Publisher;
 
-public class Robot extends TimedRobot {
+public class Robot extends LoggedRobot {
+
   private Command m_autonomousCommand;
 
   private final RobotContainer m_robotContainer;
@@ -27,7 +28,7 @@ public class Robot extends TimedRobot {
     Logger.addDataReceiver(new NT4Publisher());
     Logger.start();
 
-    OrchestraOrchestrator.playSong(Song.GymLeader);
+    OrchestraOrchestrator.sendChooser();
   }
 
   @Override
@@ -35,10 +36,13 @@ public class Robot extends TimedRobot {
 
     CommandScheduler.getInstance()
         .schedule(PathfindingCommand.warmupCommand(), m_robotContainer.getInit());
+
+    SmartDashboard.putData(CommandScheduler.getInstance());
   }
 
   @Override
   public void robotPeriodic() {
+
     CommandScheduler.getInstance().run();
   }
 
@@ -52,8 +56,12 @@ public class Robot extends TimedRobot {
   }
 
   @Override
+  public void simulationInit() {}
+
+  @Override
   public void simulationPeriodic() {
-    FuelSim.getInstance().updateSim();
+
+    BallSim.getInstance().update();
   }
 
   @Override
