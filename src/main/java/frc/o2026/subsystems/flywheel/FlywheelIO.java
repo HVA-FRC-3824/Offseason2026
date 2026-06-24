@@ -15,4 +15,6 @@ public interface FlywheelIO {
   public abstract void stopFlywheel();
 
   public AngularVelocity getMeasured();
+
+  public default void periodic() {}
 }

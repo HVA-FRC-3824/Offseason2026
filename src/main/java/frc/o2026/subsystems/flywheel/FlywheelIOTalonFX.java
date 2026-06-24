@@ -9,6 +9,7 @@ package frc.o2026.subsystems.flywheel;
 import edu.wpi.first.units.measure.AngularVelocity;
 import frc.lib.hardware.MotorIO;
 import frc.lib.hardware.ctre.TalonIO;
+import frc.o2026.Configs;
 import frc.o2026.Constants;
 
 public class FlywheelIOTalonFX implements FlywheelIO {
@@ -16,9 +17,9 @@ public class FlywheelIOTalonFX implements FlywheelIO {
   MotorIO m_motorFollower;
 
   public FlywheelIOTalonFX() {
-    m_motor = new TalonIO(Constants.CanIds.FlywheelMotorId, Constants.Flywheel.Config);
+    m_motor = new TalonIO(Constants.CanIds.FlywheelMotorId, Configs.Flywheel.Config);
     m_motorFollower =
-        new TalonIO(Constants.CanIds.FlywheelFollowerMotorId, Constants.Flywheel.Config);
+        new TalonIO(Constants.CanIds.FlywheelFollowerMotorId, Configs.Flywheel.Config);
 
     m_motorFollower.follow(Constants.CanIds.FlywheelMotorId, true);
   }

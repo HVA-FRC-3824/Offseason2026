@@ -6,6 +6,7 @@
 
 package frc.lib.hardware.ctre;
 
+import static edu.wpi.first.units.Units.Amps;
 import static edu.wpi.first.units.Units.Rotations;
 import static edu.wpi.first.units.Units.RotationsPerSecond;
 import static edu.wpi.first.units.Units.RotationsPerSecondPerSecond;
@@ -85,10 +86,10 @@ public class TalonIO implements MotorIO {
 
     TalonFXConfiguration talonConfig = new TalonFXConfiguration();
 
-    // talonConfig.CurrentLimits.SupplyCurrentLimit = config.supplyCurrent().in(Amps);
-    // talonConfig.CurrentLimits.SupplyCurrentLimitEnable = config.supplyCurrent().in(Amps) == 0.0;
-    // talonConfig.CurrentLimits.StatorCurrentLimit = config.statorCurrent().in(Amps);
-    // talonConfig.CurrentLimits.StatorCurrentLimitEnable = config.statorCurrent().in(Amps) == 0.0;
+    talonConfig.CurrentLimits.SupplyCurrentLimit = config.getSupplyCurrent().in(Amps);
+    talonConfig.CurrentLimits.SupplyCurrentLimitEnable = true;
+    talonConfig.CurrentLimits.StatorCurrentLimit = config.getStatorCurrent().in(Amps);
+    talonConfig.CurrentLimits.StatorCurrentLimitEnable = true;
 
     talonConfig.CurrentLimits.SupplyCurrentLimitEnable = false;
     talonConfig.CurrentLimits.StatorCurrentLimitEnable = false;

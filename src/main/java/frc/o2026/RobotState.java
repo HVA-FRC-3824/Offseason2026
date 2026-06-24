@@ -22,8 +22,18 @@ public class RobotState {
     return m_instance;
   }
 
-  @Setter @Getter Rotation2d SOTMRotTarget;
-  @Setter @Getter boolean simIndexing;
-  @Setter @Getter Pose3d poseEst;
-  @Setter @Getter ChassisSpeeds lastMeasuredSpeeds;
+  public void decrementFuel() {
+    simFuelCount--;
+  }
+
+  public void incrementFuel() {
+    simFuelCount++;
+  }
+
+  @Getter private int simFuelCount = 0;
+
+  @Setter @Getter private Rotation2d SOTMRotTarget = new Rotation2d();
+  @Setter @Getter private Pose3d poseEst = new Pose3d();
+  @Setter @Getter private ChassisSpeeds lastMeasuredSpeeds = new ChassisSpeeds();
+  @Setter @Getter private boolean isSimIntaking = false;
 }

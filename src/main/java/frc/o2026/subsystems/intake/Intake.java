@@ -13,7 +13,8 @@ import edu.wpi.first.units.measure.Angle;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import edu.wpi.first.wpilibj2.command.WaitCommand;
-import frc.o2026.Constants;
+import frc.o2026.Configs;
+import frc.o2026.RobotState;
 import org.ironmaple.simulation.IntakeSimulation;
 
 public class Intake extends SubsystemBase {
@@ -35,24 +36,26 @@ public class Intake extends SubsystemBase {
 
     return runOnce(
         () -> {
-          m_io.setPos(Constants.Intake.IntakeStowedTurns);
-          m_desiredAngle = Constants.Intake.IntakeStowedTurns;
+          RobotState.getInstance().setSimIntaking(false);
+          m_io.setPos(Configs.Intake.IntakeStowedTurns);
+          m_desiredAngle = Configs.Intake.IntakeStowedTurns;
         });
   }
 
-  public Command deployed() {
+  public Command deploy() {
 
     return runOnce(
         () -> {
-          m_io.setPos(Constants.Intake.IntakeDeployedTurns);
-          m_desiredAngle = Constants.Intake.IntakeDeployedTurns;
+          RobotState.getInstance().setSimIntaking(true);
+          m_io.setPos(Configs.Intake.IntakedeployTurns);
+          m_desiredAngle = Configs.Intake.IntakedeployTurns;
         });
   }
 
   public Command alligator() {
     return stowed()
         .andThen(new WaitCommand(Seconds.of(0.4)))
-        .andThen(deployed())
+        .andThen(deploy())
         .andThen(new WaitCommand(Seconds.of(0.4)))
         .repeatedly();
   }

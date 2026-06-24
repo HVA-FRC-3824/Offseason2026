@@ -32,6 +32,12 @@ public class BallSim {
     // tell it about your robot
     ballSim.configureRobot(Constants.Chassis.TrackWidthMeters.in(Meters), Constants.Chassis.WheelBaseMeters.in(Meters), Inches.of(4.5).in(Meters),
       () -> RobotState.getInstance().getPoseEst().toPose2d(), () -> RobotState.getInstance().getLastMeasuredSpeeds());
+
+    ballSim.addIntakeZone(-0.85 / 2 - 0.2, -0.85 / 2, 
+      Constants.Chassis.TrackWidthMeters.in(Meters) / -2, 
+      Constants.Chassis.TrackWidthMeters.in(Meters) / 2, 
+      RobotState.getInstance()::isSimIntaking, 
+      RobotState.getInstance()::incrementFuel);
   }
 
   public void update() {

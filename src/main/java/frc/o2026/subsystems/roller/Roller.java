@@ -8,7 +8,7 @@ package frc.o2026.subsystems.roller;
 
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
-import frc.o2026.Constants;
+import frc.o2026.Configs;
 
 public class Roller extends SubsystemBase {
 
@@ -24,10 +24,10 @@ public class Roller extends SubsystemBase {
   }
 
   public Command on() {
-    return runOnce(() -> m_io.setRoller(Constants.Roller.IntakeDriveTurnsPerSec));
+    return runOnce(() -> m_io.setRoller(Configs.Roller.IntakeDriveTurnsPerSec));
   }
 
   public Command backwards() {
-    return runOnce(() -> m_io.setRoller(Constants.Roller.IntakeDriveTurnsPerSec.times(-1.0)));
+    return runOnce(() -> m_io.setRoller(Configs.Roller.IntakeDriveTurnsPerSec.times(-1.0)));
   }
 }

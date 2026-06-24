@@ -9,6 +9,7 @@ package frc.o2026.subsystems.indexer;
 import edu.wpi.first.units.measure.AngularVelocity;
 import frc.lib.hardware.MotorIO;
 import frc.lib.hardware.ctre.TalonIO;
+import frc.o2026.Configs;
 import frc.o2026.Constants;
 
 public class IndexerTalonFX implements IndexerIO {
@@ -17,8 +18,8 @@ public class IndexerTalonFX implements IndexerIO {
 
   public IndexerTalonFX() {
 
-    m_beltMotor = new TalonIO(Constants.CanIds.IndexerMotorId, Constants.Indexer.BeltConfig);
-    m_kickerMotor = new TalonIO(Constants.CanIds.KickerMotorId, Constants.Indexer.KickerConfig);
+    m_beltMotor = new TalonIO(Constants.CanIds.IndexerMotorId, Configs.Indexer.BeltConfig);
+    m_kickerMotor = new TalonIO(Constants.CanIds.KickerMotorId, Configs.Indexer.KickerConfig);
   }
 
   @Override

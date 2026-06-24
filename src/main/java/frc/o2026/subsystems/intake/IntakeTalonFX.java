@@ -9,6 +9,7 @@ package frc.o2026.subsystems.intake;
 import edu.wpi.first.units.measure.Angle;
 import frc.lib.hardware.MotorIO;
 import frc.lib.hardware.ctre.TalonIO;
+import frc.o2026.Configs;
 import frc.o2026.Constants;
 
 public class IntakeTalonFX implements IntakeIO {
@@ -17,10 +18,9 @@ public class IntakeTalonFX implements IntakeIO {
 
   public IntakeTalonFX() {
 
-    m_motor =
-        new TalonIO(Constants.CanIds.IntakePositionLeaderMotorId, Constants.Intake.PivotConfig);
+    m_motor = new TalonIO(Constants.CanIds.IntakePositionLeaderMotorId, Configs.Intake.PivotConfig);
     m_motorFollower =
-        new TalonIO(Constants.CanIds.IntakePositionFollowerMotorId, Constants.Intake.PivotConfig);
+        new TalonIO(Constants.CanIds.IntakePositionFollowerMotorId, Configs.Intake.PivotConfig);
 
     m_motorFollower.follow(Constants.CanIds.IntakePositionLeaderMotorId, true);
   }

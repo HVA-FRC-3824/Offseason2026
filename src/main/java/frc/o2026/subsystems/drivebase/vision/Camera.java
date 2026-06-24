@@ -12,6 +12,7 @@ import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Transform3d;
 import edu.wpi.first.math.numbers.N1;
 import edu.wpi.first.math.numbers.N4;
+import frc.o2026.Configs;
 import frc.o2026.Constants;
 import frc.o2026.Robot;
 import frc.o2026.subsystems.drivebase.vision.Vision.VisionData;
@@ -27,7 +28,7 @@ import org.photonvision.targeting.PhotonTrackedTarget;
 
 public class Camera {
 
-  private Matrix<N4, N1> curStdDevs = Constants.Vision.kSingleTagStdDevs;
+  private Matrix<N4, N1> curStdDevs = Configs.Vision.kSingleTagStdDevs;
 
   private int m_xRes = 1080;
   private int m_yRes = 720;
@@ -111,10 +112,10 @@ public class Camera {
       Optional<EstimatedRobotPose> estimatedPose, List<PhotonTrackedTarget> targets) {
     if (estimatedPose.isEmpty()) {
       // No pose input. Default to single-tag std devs
-      curStdDevs = Constants.Vision.kSingleTagStdDevs;
+      curStdDevs = Configs.Vision.kSingleTagStdDevs;
     } else {
       // Pose present. Start running Heuristic
-      var estStdDevs = Constants.Vision.kSingleTagStdDevs;
+      var estStdDevs = Configs.Vision.kSingleTagStdDevs;
       int numTags = 0;
       double avgDist = 0;
 
@@ -133,12 +134,12 @@ public class Camera {
 
       if (numTags == 0) {
         // No tags visible. Default to single-tag std devs
-        curStdDevs = Constants.Vision.kSingleTagStdDevs;
+        curStdDevs = Configs.Vision.kSingleTagStdDevs;
       } else {
         // One or more tags visible, run the full heuristic.
         avgDist /= numTags;
         // Decrease std devs if multiple targets are visible
-        if (numTags > 1) estStdDevs = Constants.Vision.kMultiTagStdDevs;
+        if (numTags > 1) estStdDevs = Configs.Vision.kMultiTagStdDevs;
         // Increase std devs based on (average) distance
         // max distance 15 meters
         if (numTags == 1 && avgDist > 15) {

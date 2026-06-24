@@ -6,23 +6,13 @@
 
 package frc.o2026;
 
-import static edu.wpi.first.units.Units.Amps;
 import static edu.wpi.first.units.Units.Degrees;
-import static edu.wpi.first.units.Units.FeetPerSecond;
-import static edu.wpi.first.units.Units.FeetPerSecondPerSecond;
 import static edu.wpi.first.units.Units.Inches;
 import static edu.wpi.first.units.Units.Meters;
-import static edu.wpi.first.units.Units.RadiansPerSecond;
-import static edu.wpi.first.units.Units.RadiansPerSecondPerSecond;
 import static edu.wpi.first.units.Units.Rotations;
-import static edu.wpi.first.units.Units.RotationsPerSecond;
-import static edu.wpi.first.units.Units.RotationsPerSecondPerSecond;
 
-import com.pathplanner.lib.path.PathConstraints;
 import edu.wpi.first.apriltag.AprilTagFieldLayout;
 import edu.wpi.first.apriltag.AprilTagFields;
-import edu.wpi.first.math.Matrix;
-import edu.wpi.first.math.VecBuilder;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Pose3d;
 import edu.wpi.first.math.geometry.Rotation2d;
@@ -32,17 +22,9 @@ import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.geometry.Translation3d;
 import edu.wpi.first.math.kinematics.SwerveDriveKinematics;
 import edu.wpi.first.math.kinematics.SwerveModuleState;
-import edu.wpi.first.math.numbers.N1;
-import edu.wpi.first.math.numbers.N4;
 import edu.wpi.first.math.util.Units;
 import edu.wpi.first.units.measure.Angle;
-import edu.wpi.first.units.measure.AngularAcceleration;
-import edu.wpi.first.units.measure.AngularVelocity;
-import edu.wpi.first.units.measure.Current;
 import edu.wpi.first.units.measure.Distance;
-import edu.wpi.first.units.measure.LinearAcceleration;
-import edu.wpi.first.units.measure.LinearVelocity;
-import frc.lib.hardware.MotorConfig;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -98,11 +80,6 @@ public final class Constants {
             new Rotation2d());
   }
 
-  public static final class MotorConfigs {
-    public static final Current MaxStator = Amps.of(200.0);
-    public static final Current MaxSupply = Amps.of(40.0);
-  }
-
   public static final class Vision {
 
     public static final String kCameraName1 = "SigmaKamera";
@@ -128,138 +105,17 @@ public final class Constants {
 
     public static AprilTagFieldLayout kTagLayout =
         AprilTagFieldLayout.loadField(AprilTagFields.k2026RebuiltWelded);
-
-    // The standard deviations of our vision estimated poses, which affect correction rate
-    // (Fake values. Experiment and determine estimation noise on an actual robot.)
-    public static final Matrix<N4, N1> kSingleTagStdDevs =
-        VecBuilder.fill(
-            4,
-            4,
-            4,
-            Double.MAX_VALUE); // TODO: make these NOT MAX_VALUE and find a way to reset gyro off of
-    // vision
-    public static final Matrix<N4, N1> kMultiTagStdDevs =
-        VecBuilder.fill(0.5, 0.5, 0.5, Double.MAX_VALUE);
   }
 
-  public static final class Intake {
+  public static final class Intake {}
 
-    public static final MotorConfig PivotConfig = new MotorConfig();
+  public static final class Roller {}
 
-    static {
-      PivotConfig.withStatorCurrent(Amps.of(60.0))
-          .withInverted(true)
-          .withBrakeMode(true)
-          .withContinuousWrap(false)
-          .withP(0.8)
-          .withAccelerationLimit(RotationsPerSecondPerSecond.of(6.0))
-          .withVelocityLimit(RotationsPerSecond.of(25.0));
-    }
+  public static final class Indexer {}
 
-    public static final Angle IntakeStowedTurns = Rotations.of(0.8);
-    public static final Angle IntakeDeployedTurns = Rotations.of(10.0);
-  }
-
-  public static final class Roller {
-
-    public static final MotorConfig RollerConfig = new MotorConfig();
-
-    static {
-      RollerConfig.withStatorCurrent(Amps.of(120.0))
-          .withInverted(false)
-          .withBrakeMode(true)
-          .withContinuousWrap(false)
-          .withP(0.2);
-    }
-
-    public static final AngularVelocity IntakeDriveTurnsPerSec = RotationsPerSecond.of(600.0);
-  }
-
-  public static final class Indexer {
-
-    public static final AngularVelocity BeltTurnsPerSec = RotationsPerSecond.of(120);
-    public static final AngularVelocity KickerWheelTurnsPerSec = RotationsPerSecond.of(120);
-
-    public static final MotorConfig BeltConfig = new MotorConfig();
-
-    static {
-      BeltConfig.withStatorCurrent(Amps.of(85.0))
-          .withInverted(true)
-          .withBrakeMode(false)
-          .withContinuousWrap(false)
-          .withP(0.3)
-          .withAccelerationLimit(RotationsPerSecondPerSecond.of(120))
-          .withVelocityLimit(RotationsPerSecond.of(30));
-    }
-
-    public static final MotorConfig KickerConfig = new MotorConfig();
-
-    static {
-      KickerConfig.withStatorCurrent(Amps.of(85.0))
-          .withInverted(false)
-          .withBrakeMode(false)
-          .withContinuousWrap(false)
-          .withP(0.3)
-          .withAccelerationLimit(RotationsPerSecondPerSecond.of(120))
-          .withVelocityLimit(RotationsPerSecond.of(120));
-    }
-  }
-
-  public static final class Flywheel {
-
-    public static final MotorConfig Config = new MotorConfig();
-
-    static {
-      Config.withStatorCurrent(Amps.of(85.0))
-          .withInverted(false)
-          .withBrakeMode(false)
-          .withContinuousWrap(false)
-          .withP(0.55)
-          .withV(0.13)
-          .withA(0.99);
-    }
-
-    public static final AngularVelocity CloseSpeed = RotationsPerSecond.of(45.0); // 90 in
-    public static final AngularVelocity MiddleSpeed = RotationsPerSecond.of(51.0); // 120 in
-    public static final AngularVelocity FieldPassSpeed = RotationsPerSecond.of(85.0);
-    public static final AngularVelocity NeutralPassSpeed = RotationsPerSecond.of(65.0);
-
-    // as a percentage of the reference (3tps tolerance at 100tps reference)
-    public static final double SpunUpTolerance = 3.0;
-  }
+  public static final class Flywheel {}
 
   public static final class Chassis {
-
-    public static final MotorConfig DriveConfig = new MotorConfig();
-
-    static {
-      DriveConfig
-          // .withSupplyLimit(Amps.of(40.0))
-          // .withStatorLimit(Amps.of(100.0))
-          .withBrakeMode(true)
-          .withInverted(false)
-          .withContinuousWrap(false)
-          .withP(0.1)
-          // .withV(0.12)
-          .withA(0.0)
-          .withVelocityLimit(RotationsPerSecond.of(100)) // Max free speed
-          .withAccelerationLimit(RotationsPerSecondPerSecond.of(200)); // reach in 0.5 sec
-    }
-
-    public static final MotorConfig TurnConfig = new MotorConfig();
-
-    static {
-      TurnConfig.withStatorCurrent(Amps.of(20.0))
-          .withSupplyCurrent(Amps.of(40.0))
-          .withInverted(true)
-          .withBrakeMode(true)
-          .withContinuousWrap(true)
-          .withP(0.01)
-          .withD(0.0002)
-          .withSensorToMechanismRatio(21.5)
-          .withVelocityLimit(RotationsPerSecond.of(20))
-          .withAccelerationLimit(RotationsPerSecondPerSecond.of(200));
-    }
 
     // NOTE: The absolute encoder range is 0.5 to -0.5
     // These are the absolute encoder values that correspond to the wheels facing "forward"
@@ -270,17 +126,6 @@ public final class Constants {
     public static final Angle BackRightForwardsAngle =
         Rotations.of(0.05908); // Degrees.of(-0.11377);
     public static final Angle BackLeftForwardsAngle = Rotations.of(0.07); // Degrees.of(-0.025146);
-
-    public static final LinearVelocity MaximumLinear = FeetPerSecond.of(12.0);
-    public static final LinearAcceleration MaximumLinearAcceleration =
-        FeetPerSecondPerSecond.of(12.0);
-
-    public static final AngularVelocity MaximumAngularVelocity = RadiansPerSecond.of(4 * Math.PI);
-    public static final AngularAcceleration MaximumAngularAcceleration =
-        RadiansPerSecondPerSecond.of(4 * Math.PI);
-
-    public static final double TranslateExponentialPower = 3.0;
-    public static final double AngularExponentialPower = 4.0;
 
     public static final Distance WheelBaseMeters = Inches.of(30.0);
     public static final Distance TrackWidthMeters = Inches.of(30.0);
@@ -312,13 +157,6 @@ public final class Constants {
 
     public static final SwerveDriveKinematics Kinematics =
         new SwerveDriveKinematics(ModulePositions);
-
-    public static final PathConstraints constraints =
-        new PathConstraints(
-            Constants.Chassis.MaximumLinear,
-            Constants.Chassis.MaximumLinearAcceleration,
-            Constants.Chassis.MaximumAngularVelocity,
-            Constants.Chassis.MaximumAngularAcceleration);
   }
 
   public static final class CanIds {

@@ -15,6 +15,7 @@ import edu.wpi.first.units.measure.AngularVelocity;
 import edu.wpi.first.wpilibj.simulation.DCMotorSim;
 import frc.lib.hardware.MotorIO;
 import frc.lib.hardware.ctre.TalonIO;
+import frc.o2026.Configs;
 import frc.o2026.Constants;
 
 public class IndexerSim implements IndexerIO {
@@ -30,11 +31,10 @@ public class IndexerSim implements IndexerIO {
   public IndexerSim() {
 
     m_beltMotor =
-        new TalonIO(
-            Constants.CanIds.IndexerMotorId, Constants.Indexer.BeltConfig, true); // is an X60
+        new TalonIO(Constants.CanIds.IndexerMotorId, Configs.Indexer.BeltConfig, true); // is an X60
 
     m_kickerMotor =
-        new TalonIO(Constants.CanIds.KickerMotorId, Constants.Indexer.KickerConfig, false);
+        new TalonIO(Constants.CanIds.KickerMotorId, Configs.Indexer.KickerConfig, false);
 
     m_indexerModel =
         new DCMotorSim(

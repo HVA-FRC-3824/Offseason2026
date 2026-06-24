@@ -16,6 +16,7 @@ import edu.wpi.first.units.measure.AngularVelocity;
 import edu.wpi.first.wpilibj.simulation.DCMotorSim;
 import frc.lib.hardware.MotorIO;
 import frc.lib.hardware.ctre.TalonIO;
+import frc.o2026.Configs;
 import frc.o2026.Constants;
 import org.ironmaple.simulation.IntakeSimulation;
 import org.ironmaple.simulation.drivesims.AbstractDriveTrainSimulation;
@@ -31,7 +32,7 @@ public class RollerSim implements RollerIO {
 
     m_motor =
         new TalonIO(
-            Constants.CanIds.FuelIntakeMotorId, Constants.Roller.RollerConfig, true); // is an X60
+            Constants.CanIds.FuelIntakeMotorId, Configs.Roller.RollerConfig, true); // is an X60
 
     m_motorModel =
         new DCMotorSim(

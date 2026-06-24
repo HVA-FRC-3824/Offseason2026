@@ -9,16 +9,19 @@ package frc.o2026.subsystems.drivebase.vision;
 import edu.wpi.first.apriltag.AprilTagFieldLayout;
 import edu.wpi.first.apriltag.AprilTagFields;
 import edu.wpi.first.math.Matrix;
+import edu.wpi.first.math.VecBuilder;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Pose3d;
 import edu.wpi.first.math.numbers.N1;
+import edu.wpi.first.math.numbers.N3;
 import edu.wpi.first.math.numbers.N4;
+import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.o2026.Constants;
 import frc.o2026.Robot;
 import java.util.function.Consumer;
 import org.photonvision.simulation.VisionSystemSim;
 
-public class Vision {
+public class Vision extends SubsystemBase {
 
   public static AprilTagFieldLayout fieldAprilTags =
       AprilTagFieldLayout.loadField(AprilTagFields.k2026RebuiltWelded);
@@ -46,7 +49,12 @@ public class Vision {
     }
   }
 
-  public void periodic(Pose2d simRealPos) {
+  public void update() {
+
+    update(null);
+  }
+
+  public void update(Pose2d simRealPos) {
 
     for (Camera camera : cameras)
       for (VisionData data : camera.getMeasurements()) m_poseEstimatorConsumer.accept(data);
@@ -78,5 +86,11 @@ public class Vision {
   }
 
   public record VisionData(
-      Pose3d visionMeasurement, double timestampSeconds, Matrix<N4, N1> stdDevs, int[] target) {}
+      Pose3d visionMeasurement, double timestampSeconds, Matrix<N4, N1> stdDevs, int[] target) {
+
+    public Matrix<N3, N1> get2dStdDevs() {
+
+      return VecBuilder.fill(stdDevs().get(0, 0), stdDevs().get(1, 0), stdDevs().get(3, 0));
+    }
+  }
 }

@@ -29,11 +29,13 @@ public class Swerve extends SubsystemBase {
 
   private boolean m_fieldCentricity = true;
 
-  private PIDController m_aimController = new PIDController(1, 0, 0);
+  private PIDController m_aimController = new PIDController(2, 0, 0);
 
   public Swerve(SwerveIO io) {
 
     m_io = io;
+
+    m_aimController.enableContinuousInput(-Math.PI, Math.PI);
 
     RobotConfig config;
     try {
@@ -70,8 +72,8 @@ public class Swerve extends SubsystemBase {
     RobotState.getInstance().setLastMeasuredSpeeds(getChassisSpeeds());
     RobotState.getInstance().setPoseEst(getPose());
 
-    Logger.recordOutput("Pose", getPose());
-    Logger.recordOutput("Heading", getHeading());
+    Logger.recordOutput("m-pose", getPose());
+    Logger.recordOutput("m-heading", getHeading());
   }
 
   public ChassisSpeeds getChassisSpeeds() {
@@ -94,6 +96,15 @@ public class Swerve extends SubsystemBase {
     m_io.resetPose(pose);
   }
 
+  private void driveFieldRelative(ChassisSpeeds speeds) {
+
+    m_io.driveRobotRelative(
+        m_fieldCentricity
+            ? ChassisSpeeds.fromFieldRelativeSpeeds(
+                speeds, (Alliance.isRed() ? getHeading() : getHeading().plus(Rotation2d.k180deg)))
+            : speeds);
+  }
+
   public Command resetSwerveModules() {
     return runOnce(() -> m_io.resetWheelAnglesToZero()).withName("resetSwerveModules");
   }
@@ -101,14 +112,7 @@ public class Swerve extends SubsystemBase {
   public Command drive(Supplier<ChassisSpeeds> speedsSupplier) {
 
     return run(() -> {
-          m_io.driveRobotRelative(
-              m_fieldCentricity
-                  ? ChassisSpeeds.fromFieldRelativeSpeeds(
-                      speedsSupplier.get(),
-                      (Alliance.isRed() // Flip if red
-                          ? getHeading().unaryMinus()
-                          : getHeading()))
-                  : speedsSupplier.get());
+          driveFieldRelative(speedsSupplier.get());
         })
         .withName("Drive");
   }
@@ -122,14 +126,7 @@ public class Swerve extends SubsystemBase {
                   getHeading().getRadians(),
                   RobotState.getInstance().getSOTMRotTarget().getRadians());
 
-          m_io.driveRobotRelative(
-              m_fieldCentricity
-                  ? ChassisSpeeds.fromFieldRelativeSpeeds(
-                      speeds,
-                      (Alliance.isRed() // Flip if red
-                          ? getHeading().unaryMinus()
-                          : getHeading()))
-                  : speeds);
+          driveFieldRelative(speeds);
         })
         .withName("AimSOTM");
   }

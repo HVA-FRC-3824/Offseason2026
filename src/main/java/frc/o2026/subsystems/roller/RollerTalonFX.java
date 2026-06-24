@@ -9,6 +9,7 @@ package frc.o2026.subsystems.roller;
 import edu.wpi.first.units.measure.AngularVelocity;
 import frc.lib.hardware.MotorIO;
 import frc.lib.hardware.ctre.TalonIO;
+import frc.o2026.Configs;
 import frc.o2026.Constants;
 
 public class RollerTalonFX implements RollerIO {
@@ -16,7 +17,7 @@ public class RollerTalonFX implements RollerIO {
 
   public RollerTalonFX() {
 
-    m_motor = new TalonIO(Constants.CanIds.FuelIntakeMotorId, Constants.Roller.RollerConfig);
+    m_motor = new TalonIO(Constants.CanIds.FuelIntakeMotorId, Configs.Roller.RollerConfig);
   }
 
   @Override

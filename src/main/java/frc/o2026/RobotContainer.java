@@ -18,7 +18,7 @@ import frc.o2026.subsystems.drivebase.Swerve;
 import frc.o2026.subsystems.drivebase.SwerveIOReal;
 import frc.o2026.subsystems.drivebase.SwerveIOSim;
 import frc.o2026.subsystems.flywheel.Flywheel;
-import frc.o2026.subsystems.flywheel.FlywheelIONothing;
+import frc.o2026.subsystems.flywheel.FlywheelIOSim;
 import frc.o2026.subsystems.gyro.GyroPigeon;
 import frc.o2026.subsystems.indexer.Indexer;
 import frc.o2026.subsystems.indexer.IndexerIONothing;
@@ -34,7 +34,7 @@ public class RobotContainer {
   private Roller m_roller = new Roller(new RollerIONothing());
   private Indexer m_indexer = new Indexer(new IndexerIONothing());
   private Intake m_intake = new Intake(new IntakeIONothing());
-  private Flywheel m_flywheel = new Flywheel(new FlywheelIONothing());
+  private Flywheel m_flywheel = new Flywheel(new FlywheelIOSim());
 
   private CommandXboxController m_driver = new CommandXboxController(Constants.Usb.DrivePort);
   private CommandXboxController m_operator = new CommandXboxController(Constants.Usb.OperatorPort);
@@ -47,33 +47,47 @@ public class RobotContainer {
     SmartDashboard.putData("Auto Chooser", m_autoChooser);
 
     m_swerve.setDefaultCommand(m_swerve.drive(this::getSpeeds));
+
+    m_driver
+        .rightTrigger()
+        .whileTrue(
+            Commands.parallel(
+                m_flywheel.auto(),
+                m_swerve.aimSOTM(this::getSpeeds),
+                m_indexer.on().onlyWhile(m_flywheel::isReady),
+                m_intake.alligator()));
+
+    m_driver.rightTrigger().onFalse(Commands.parallel(m_flywheel.off(), m_intake.stowed()));
+
+    m_driver.leftTrigger().onTrue(Commands.parallel(m_intake.deploy(), m_roller.on()));
+    m_driver.leftTrigger().onFalse(Commands.parallel(m_roller.off()));
   }
 
   private ChassisSpeeds getSpeeds() {
 
     double leftX = m_driver.getLeftX();
     double leftY = m_driver.getLeftY();
-    double rightX = m_driver.getRightX();
+    double rightX = -m_driver.getRightX();
 
     double angle = Math.atan2(leftY, leftX);
 
     double magnitude = Math.sqrt(leftY * leftY + leftX * leftX);
 
     magnitude =
-        Math.pow(Math.abs(magnitude), Constants.Chassis.TranslateExponentialPower)
+        Math.pow(Math.abs(magnitude), Configs.Chassis.TranslateExponentialPower)
             * magnitude; // expo stuff here
 
     double strafe = magnitude * Math.sin(angle);
     double forwards = magnitude * Math.cos(angle);
 
     double rot =
-        Math.pow(Math.abs(rightX), Constants.Chassis.AngularExponentialPower)
-            * magnitude; // expo stuff here
+        Math.pow(Math.abs(rightX), Configs.Chassis.AngularExponentialPower)
+            * rightX; // expo stuff here
 
     return new ChassisSpeeds(
-        Constants.Chassis.MaximumLinear.times(strafe),
-        Constants.Chassis.MaximumLinear.times(forwards),
-        Constants.Chassis.MaximumAngularVelocity.times(rot));
+        Configs.Chassis.MaximumLinear.times(strafe),
+        Configs.Chassis.MaximumLinear.times(forwards),
+        Configs.Chassis.MaximumAngularVelocity.times(rot));
   }
 
   public Command getInit() {

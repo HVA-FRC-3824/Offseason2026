@@ -12,6 +12,7 @@ import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
 import frc.lib.hardware.ctre.OrchestraOrchestrator;
 import frc.lib.rebuilt.BallSim;
+import org.ironmaple.simulation.SimulatedArena;
 import org.littletonrobotics.junction.LoggedRobot;
 import org.littletonrobotics.junction.Logger;
 import org.littletonrobotics.junction.networktables.NT4Publisher;
@@ -61,6 +62,7 @@ public class Robot extends LoggedRobot {
   @Override
   public void simulationPeriodic() {
 
+    SimulatedArena.getInstance().simulationPeriodic();
     BallSim.getInstance().update();
   }
 

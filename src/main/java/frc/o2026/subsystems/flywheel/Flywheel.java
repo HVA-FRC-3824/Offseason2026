@@ -23,12 +23,16 @@ import frc.lib.Alliance;
 import frc.lib.rebuilt.BallSim;
 import frc.lib.rebuilt.firecontrol.ProjectileSimulator;
 import frc.lib.rebuilt.firecontrol.ShotCalculator;
+import frc.o2026.Configs;
 import frc.o2026.Constants;
 import frc.o2026.RobotState;
+import org.littletonrobotics.junction.Logger;
 
 public class Flywheel extends SubsystemBase {
 
   private AngularVelocity m_lastInput = RotationsPerSecond.of(0.0);
+
+  private boolean m_validShot = false;
 
   private FlywheelIO m_io;
 
@@ -88,6 +92,16 @@ public class Flywheel extends SubsystemBase {
     }
   }
 
+  @Override
+  public void periodic() {
+
+    m_io.periodic();
+
+    Logger.recordOutput("m-isReady", isReady());
+    Logger.recordOutput("m-flywheel", m_io.getMeasured());
+    Logger.recordOutput("d-flywheel", m_lastInput);
+  }
+
   public Command off() {
 
     return runOnce(
@@ -145,11 +159,19 @@ public class Flywheel extends SubsystemBase {
                   pose.getRotation().getMeasureX().in(Degrees));
 
           ShotCalculator.LaunchParameters shot = m_shotCalc.calculate(inputs);
-          if (shot.isValid() && shot.confidence() > 50) {
-            m_io.setFlywheel(RPM.of(shot.rpm()));
-            RobotState.getInstance().setSOTMRotTarget(shot.driveAngle());
 
-            if (RobotBase.isSimulation() && RobotState.getInstance().isSimIndexing()) {
+          RobotState.getInstance().setSOTMRotTarget(shot.driveAngle());
+
+          m_validShot = shot.isValid() && shot.confidence() > 50;
+
+          if (m_validShot) {
+
+            m_io.setFlywheel(RPM.of(shot.rpm()));
+            m_lastInput = RPM.of(shot.rpm());
+
+            if (RobotBase.isSimulation() && RobotState.getInstance().getSimFuelCount() > 0) {
+              RobotState.getInstance().decrementFuel();
+
               BallSim.getInstance()
                   .shoot(
                       pose.getTranslation(),
@@ -161,7 +183,7 @@ public class Flywheel extends SubsystemBase {
                           .rotateBy(
                               new Rotation3d(
                                   Degrees.of(0.0),
-                                  Degrees.of(27.0),
+                                  Degrees.of(90 - 27.0),
                                   pose.getRotation().getMeasureZ())),
                       new Translation3d(0.0, shot.driveAngularVelocityRadPerSec(), 0.0));
             }
@@ -169,10 +191,11 @@ public class Flywheel extends SubsystemBase {
         });
   }
 
-  public boolean isSpunUp() {
+  public boolean isReady() {
 
-    return getReference().isNear(m_io.getMeasured(), Constants.Flywheel.SpunUpTolerance)
-        && getReference().in(RotationsPerSecond) != 0.0;
+    return getReference().isNear(m_io.getMeasured(), Configs.Flywheel.SpunUpTolerance)
+        && getReference().in(RotationsPerSecond) != 0.0
+        && m_validShot;
   }
 
   public AngularVelocity getReference() {
@@ -181,11 +204,11 @@ public class Flywheel extends SubsystemBase {
   }
 
   public enum Setpoints {
-    Backwards(Constants.Flywheel.CloseSpeed.times(-1.0)),
-    Low(Constants.Flywheel.CloseSpeed),
-    Mid(Constants.Flywheel.MiddleSpeed),
-    Neutral(Constants.Flywheel.NeutralPassSpeed),
-    Field(Constants.Flywheel.FieldPassSpeed);
+    Backwards(Configs.Flywheel.CloseSpeed.times(-1.0)),
+    Low(Configs.Flywheel.CloseSpeed),
+    Mid(Configs.Flywheel.MiddleSpeed),
+    Neutral(Configs.Flywheel.NeutralPassSpeed),
+    Field(Configs.Flywheel.FieldPassSpeed);
 
     AngularVelocity m_velocity;
 

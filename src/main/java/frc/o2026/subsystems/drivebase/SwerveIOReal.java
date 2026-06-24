@@ -18,7 +18,6 @@ import edu.wpi.first.math.kinematics.SwerveModulePosition;
 import edu.wpi.first.math.kinematics.SwerveModuleState;
 import frc.o2026.Constants;
 import frc.o2026.subsystems.drivebase.vision.Vision;
-import frc.o2026.subsystems.drivebase.vision.Vision.VisionData;
 import frc.o2026.subsystems.gyro.GyroIO;
 
 /// @brief Chassis subsystem for swerve drive control
@@ -93,7 +92,11 @@ public class SwerveIOReal implements SwerveIO {
   boolean m_xMode = false;
 
   private GyroIO m_gyroIO;
-  private Vision m_vision = new Vision(this::addVisionData);
+  private Vision m_vision =
+      new Vision(
+          (data) ->
+              m_estimator.addVisionMeasurement(
+                  data.visionMeasurement(), data.timestampSeconds(), data.stdDevs()));
 
   public SwerveIOReal(GyroIO gyroIO) {
 
@@ -104,6 +107,8 @@ public class SwerveIOReal implements SwerveIO {
 
   @Override
   public void periodic() {
+
+    m_vision.update();
 
     m_estimator.update(m_gyroIO.getGyroRotation(), getModulePositions());
   }
@@ -183,12 +188,6 @@ public class SwerveIOReal implements SwerveIO {
   public Rotation2d getGyroHeading() {
 
     return m_gyroIO.getGyroRotation().toRotation2d();
-  }
-
-  private void addVisionData(VisionData data) {
-
-    m_estimator.addVisionMeasurement(
-        data.visionMeasurement(), data.timestampSeconds(), data.stdDevs());
   }
 
   public boolean getIsXMode() {

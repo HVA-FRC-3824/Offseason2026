@@ -8,7 +8,6 @@ package frc.o2026.subsystems.drivebase;
 
 import static edu.wpi.first.units.Units.Inches;
 
-import edu.wpi.first.math.Matrix;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Pose3d;
 import edu.wpi.first.math.geometry.Rotation2d;
@@ -16,11 +15,10 @@ import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.kinematics.SwerveModulePosition;
 import edu.wpi.first.math.kinematics.SwerveModuleState;
-import edu.wpi.first.math.numbers.N1;
-import edu.wpi.first.math.numbers.N3;
 import edu.wpi.first.math.system.plant.DCMotor;
 import frc.lib.rebuilt.RobotBumpSim;
 import frc.o2026.Constants;
+import frc.o2026.subsystems.drivebase.vision.Vision;
 import org.ironmaple.simulation.SimulatedArena;
 import org.ironmaple.simulation.drivesims.COTS;
 import org.ironmaple.simulation.drivesims.SelfControlledSwerveDriveSimulation;
@@ -48,9 +46,9 @@ public class SwerveIOSim implements SwerveIO {
           // Specify swerve module (for realistic swerve dynamics)
           .withSwerveModule(
               COTS.ofMark4(
-                  DCMotor.getKrakenX60(1), // Drive motor is a Kraken X60
-                  DCMotor.getNEO(1), // Steer motor is a Falcon 500
-                  COTS.WHEELS.COLSONS.cof, // Use the COF for Colson Wheels
+                  DCMotor.getKrakenX60(1), // Drive motor
+                  DCMotor.getNEO(1), // Steer motor
+                  COTS.WHEELS.DEFAULT_NEOPRENE_TREAD.cof,
                   2)) // L3 Gear ratio
           .withTrackLengthTrackWidth(
               Constants.Chassis.WheelBaseMeters, Constants.Chassis.TrackWidthMeters)
@@ -61,39 +59,39 @@ public class SwerveIOSim implements SwerveIO {
   private static SelfControlledSwerveDriveSimulation m_swerveDriveSimulation =
       new SelfControlledSwerveDriveSimulation(
           new SwerveDriveSimulation(
-              driveTrainSimulationConfig, new Pose2d(0, 0, new Rotation2d())));
+              driveTrainSimulationConfig, new Pose2d(2, 2, new Rotation2d())));
 
-  public RobotBumpSim m_robotBumpSim = new RobotBumpSim(Constants.Chassis.ModulePositions);
+  private RobotBumpSim m_robotBumpSim = new RobotBumpSim(Constants.Chassis.ModulePositions);
+
+  private Vision m_vision =
+      new Vision(
+          (data) ->
+              m_swerveDriveSimulation.addVisionEstimation(
+                  data.visionMeasurement().toPose2d(),
+                  data.timestampSeconds(),
+                  data.get2dStdDevs()));
+
+  private boolean m_xMode = false;
+
+  public SwerveIOSim() {
+
+    SimulatedArena.getInstance()
+        .addDriveTrainSimulation(m_swerveDriveSimulation.getDriveTrainSimulation());
+  }
 
   @Override
   public Pose2d getPose() {
 
+    // return m_swerveDriveSimulation.getOdometryEstimatedPose();
     return m_swerveDriveSimulation.getOdometryEstimatedPose();
   }
 
   @Override
   public Rotation2d getGyroHeading() {
-    return m_swerveDriveSimulation.getOdometryEstimatedPose().getRotation();
+    return getPose().getRotation();
   }
 
-  public static void addVisionMeasurement(
-      Pose2d visionRobotPoseMeters,
-      double timestampSeconds,
-      Matrix<N3, N1> visionMeasurementStdDevs) {
-
-    m_swerveDriveSimulation.addVisionEstimation(
-        visionRobotPoseMeters, timestampSeconds, visionMeasurementStdDevs);
-  }
-
-  ChassisSpeeds m_desiredSpeeds = new ChassisSpeeds(0, 0, 0);
-
-  boolean m_xMode = false;
-
-  public SwerveIOSim() {
-    SimulatedArena.getInstance()
-        .addDriveTrainSimulation(m_swerveDriveSimulation.getDriveTrainSimulation());
-  }
-
+  @Override
   public void driveRobotRelative(ChassisSpeeds speeds) {
 
     // If the chassis is in x mode, than stay in x mode, ignoring the desired speeds
@@ -109,11 +107,13 @@ public class SwerveIOSim implements SwerveIO {
     SwerveModuleState[] desiredStates = Constants.Chassis.Kinematics.toSwerveModuleStates(speeds);
 
     // Set the desired state for each swerve module
-    setModuleStates(desiredStates);
+    // setModuleStates(desiredStates);
+    m_swerveDriveSimulation.runChassisSpeeds(speeds, new Translation2d(), false, true);
 
     Logger.recordOutput("XMode", m_xMode);
     Logger.recordOutput("d-speeds", speeds);
     Logger.recordOutput("d-states", desiredStates);
+    Logger.recordOutput("sim-pose", m_swerveDriveSimulation.getActualPoseInSimulationWorld());
   }
 
   @Override
@@ -129,6 +129,8 @@ public class SwerveIOSim implements SwerveIO {
 
   @Override
   public void periodic() {
+
+    m_vision.update(m_swerveDriveSimulation.getActualPoseInSimulationWorld());
 
     m_swerveDriveSimulation.periodic();
 
