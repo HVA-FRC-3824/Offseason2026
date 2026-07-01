@@ -19,6 +19,11 @@ public class Roller extends SubsystemBase {
     m_io = io;
   }
 
+  @Override
+  public void periodic() {
+    m_io.periodic();
+  }
+
   public Command off() {
     return runOnce(m_io::brakeRoller);
   }

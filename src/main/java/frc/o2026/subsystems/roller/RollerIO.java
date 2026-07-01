@@ -10,6 +10,8 @@ import edu.wpi.first.units.measure.AngularVelocity;
 
 public interface RollerIO {
 
+  public default void periodic() {}
+
   public void setRoller(AngularVelocity velocity);
 
   public void brakeRoller();

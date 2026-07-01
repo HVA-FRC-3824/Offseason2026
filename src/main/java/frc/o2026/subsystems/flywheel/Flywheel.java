@@ -20,6 +20,7 @@ import edu.wpi.first.wpilibj.RobotBase;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.lib.Alliance;
+import frc.lib.hardware.MotorIO;
 import frc.lib.rebuilt.BallSim;
 import frc.lib.rebuilt.firecontrol.ProjectileSimulator;
 import frc.lib.rebuilt.firecontrol.ShotCalculator;
@@ -34,13 +35,15 @@ public class Flywheel extends SubsystemBase {
 
   private boolean m_validShot = false;
 
-  private FlywheelIO m_io;
+  private MotorIO m_teacherIO;
+  private MotorIO m_studentIO;
 
   private ShotCalculator m_shotCalc;
 
-  public Flywheel(FlywheelIO io) {
+  public Flywheel(MotorIO teacherIO, MotorIO studentIO) {
 
-    m_io = io;
+    m_teacherIO = teacherIO;
+    m_studentIO = studentIO;
 
     ProjectileSimulator.SimParameters params =
         new ProjectileSimulator.SimParameters(
@@ -90,15 +93,17 @@ public class Flywheel extends SubsystemBase {
         m_shotCalc.loadLUTEntry(entry.distanceM(), entry.rpm(), entry.tof());
       }
     }
+
+    m_studentIO.follow(m_teacherIO.getId(), true);
   }
 
   @Override
   public void periodic() {
 
-    m_io.periodic();
+    if (RobotBase.isSimulation()) m_teacherIO.simPeriodic();
 
     Logger.recordOutput("m-isReady", isReady());
-    Logger.recordOutput("m-flywheel", m_io.getMeasured());
+    Logger.recordOutput("m-flywheel", m_teacherIO.getVelocity());
     Logger.recordOutput("d-flywheel", m_lastInput);
   }
 
@@ -106,7 +111,7 @@ public class Flywheel extends SubsystemBase {
 
     return runOnce(
         () -> {
-          m_io.stopFlywheel();
+          m_teacherIO.brake();
           m_lastInput = RotationsPerSecond.of(0.0);
         });
   }
@@ -115,7 +120,7 @@ public class Flywheel extends SubsystemBase {
 
     return runOnce(
         () -> {
-          m_io.setFlywheel(velocity);
+          m_teacherIO.setVelocity(velocity);
           m_lastInput = velocity;
         });
   }
@@ -124,7 +129,7 @@ public class Flywheel extends SubsystemBase {
 
     return runOnce(
         () -> {
-          m_io.setFlywheel(setpoint.m_velocity);
+          m_teacherIO.setVelocity(setpoint.m_velocity);
           m_lastInput = setpoint.m_velocity;
         });
   }
@@ -166,7 +171,7 @@ public class Flywheel extends SubsystemBase {
 
           if (m_validShot) {
 
-            m_io.setFlywheel(RPM.of(shot.rpm()));
+            m_teacherIO.setVelocity(RPM.of(shot.rpm()));
             m_lastInput = RPM.of(shot.rpm());
 
             if (RobotBase.isSimulation() && RobotState.getInstance().getSimFuelCount() > 0) {
@@ -193,7 +198,7 @@ public class Flywheel extends SubsystemBase {
 
   public boolean isReady() {
 
-    return getReference().isNear(m_io.getMeasured(), Configs.Flywheel.SpunUpTolerance)
+    return getReference().isNear(m_teacherIO.getPos(), Configs.Flywheel.SpunUpTolerance)
         && getReference().in(RotationsPerSecond) != 0.0
         && m_validShot;
   }

@@ -10,6 +10,7 @@ import com.pathplanner.lib.commands.PathfindingCommand;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
+import frc.lib.hardware.SimBattery;
 import frc.lib.hardware.ctre.OrchestraOrchestrator;
 import frc.lib.rebuilt.BallSim;
 import org.ironmaple.simulation.SimulatedArena;
@@ -43,6 +44,9 @@ public class Robot extends LoggedRobot {
 
   @Override
   public void robotPeriodic() {
+
+    SimBattery.calculateSupplyVoltage();
+    Logger.recordOutput("SimVoltage", SimBattery.getSupplyVoltage());
 
     CommandScheduler.getInstance().run();
   }

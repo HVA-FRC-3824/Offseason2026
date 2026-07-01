@@ -7,8 +7,10 @@
 package frc.lib.hardware.ctre;
 
 import static edu.wpi.first.units.Units.Amps;
+import static edu.wpi.first.units.Units.Rotations;
 import static edu.wpi.first.units.Units.RotationsPerSecond;
 import static edu.wpi.first.units.Units.RotationsPerSecondPerSecond;
+import static edu.wpi.first.units.Units.Volts;
 
 import com.ctre.phoenix6.configs.TalonFXConfiguration;
 import com.ctre.phoenix6.controls.Follower;
@@ -19,47 +21,54 @@ import com.ctre.phoenix6.hardware.TalonFX;
 import com.ctre.phoenix6.signals.InvertedValue;
 import com.ctre.phoenix6.signals.MotorAlignmentValue;
 import com.ctre.phoenix6.signals.NeutralModeValue;
+import com.ctre.phoenix6.sim.TalonFXSimState.MotorType;
+import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.units.measure.Angle;
 import edu.wpi.first.units.measure.AngularVelocity;
 import edu.wpi.first.units.measure.Voltage;
+import edu.wpi.first.wpilibj.RobotController;
+import edu.wpi.first.wpilibj.simulation.FlywheelSim;
 import frc.lib.hardware.MotorConfig;
 import frc.lib.hardware.MotorIO;
+import frc.lib.hardware.SimBattery;
 import java.util.function.Supplier;
 import org.littletonrobotics.junction.Logger;
 
-public class TalonIO implements MotorIO {
+public class FlywheelSimIO implements MotorIO {
 
-  final TalonFX m_motor;
+  private final TalonFX m_motor;
 
-  final Supplier<Angle> m_posSupplier;
-  final Supplier<AngularVelocity> m_velSupplier;
+  private final FlywheelSim m_motorSimModel;
 
-  public TalonIO(int id, boolean isX60) {
+  private final Supplier<Angle> m_posSupplier;
+  private final Supplier<AngularVelocity> m_velSupplier;
+
+  private int m_gearRatio;
+
+  private MotorType m_simType;
+
+  private Angle m_position = Rotations.of(0.0);
+
+  public FlywheelSimIO(
+      int id, MotorConfig config, boolean isX60, FlywheelSim motorSimModel, int gearRatio) {
 
     m_motor = new TalonFX(id);
+
+    m_motorSimModel = motorSimModel;
+
     m_posSupplier = m_motor.getPosition().asSupplier();
     m_velSupplier = m_motor.getVelocity().asSupplier();
 
-    OrchestraOrchestrator.addInstrument(m_motor);
-  }
+    m_simType = isX60 ? MotorType.KrakenX60 : MotorType.KrakenX44;
 
-  public TalonIO(int id, MotorConfig config, boolean isX60) {
+    m_gearRatio = gearRatio;
 
-    this(id, isX60);
+    SimBattery.registerDevice(m_motor.getSupplyCurrent().asSupplier());
 
     config(config);
   }
 
-  public TalonIO(int id, MotorConfig config) {
-
-    this(id, config, true);
-  }
-
-  public TalonIO(int id) {
-
-    this(id, true);
-  }
-
+  @Override
   public void config(MotorConfig config) {
 
     TalonFXConfiguration talonConfig = new TalonFXConfiguration();
@@ -106,45 +115,79 @@ public class TalonIO implements MotorIO {
     return m_motor.getDeviceID();
   }
 
+  @Override
+  public void simPeriodic() {
+
+    var talonFXSim = m_motor.getSimState();
+    talonFXSim.setMotorType(m_simType);
+
+    // set the supply voltage of the TalonFX
+    talonFXSim.setSupplyVoltage(SimBattery.getSupplyVoltage().in(Volts));
+
+    // get the motor voltage of the TalonFX
+    var motorVoltage = talonFXSim.getMotorVoltageMeasure();
+
+    // use the motor voltage to calculate new position and velocity
+    // using WPILib's DCMotorSim class for physics simulation
+    m_motorSimModel.setInput(
+        MathUtil.clamp(
+            motorVoltage.in(Volts),
+            -SimBattery.getSupplyVoltage().in(Volts),
+            SimBattery.getSupplyVoltage().in(Volts)));
+    m_motorSimModel.update(0.020); // assume 20 ms loop time
+
+    // apply the new rotor position and velocity to the TalonFX;
+    // note that this is rotor position/velocity (before gear ratio), but
+    // DCMotorSim returns mechanism position/velocity (after gear ratio)
+    talonFXSim.setRawRotorPosition(m_position.times(m_gearRatio));
+    talonFXSim.setRotorVelocity(
+        m_motorSimModel.getAngularVelocity().in(RotationsPerSecond) * m_gearRatio);
+
+    m_position =
+        m_position.plus(
+            Rotations.of(m_motorSimModel.getAngularVelocity().in(RotationsPerSecond) * 0.02));
+  }
+
+  @Override
   public Voltage getAppliedVoltage() {
 
-    return m_motor.getMotorVoltage().getValue();
+    return Volts.of(m_motorSimModel.getInputVoltage());
   }
 
+  @Override
   public Voltage getSupplyVoltage() {
 
-    return m_motor.getSupplyVoltage().getValue();
+    return Volts.of(RobotController.getBatteryVoltage());
   }
 
+  @Override
   public Angle getPos() {
 
     return m_posSupplier.get();
   }
 
+  @Override
   public AngularVelocity getVelocity() {
 
     return m_velSupplier.get();
   }
 
+  @Override
   public void setVelocity(AngularVelocity angleVel) {
-
-    OrchestraOrchestrator.removeInstrument(m_motor.getDeviceID());
 
     var status = m_motor.setControl(new MotionMagicVelocityVoltage(angleVel));
     Logger.recordOutput("MotorErr/Talon " + m_motor.getDeviceID(), status.toString());
   }
 
+  @Override
   public void setPosition(Angle angle) {
-
-    OrchestraOrchestrator.removeInstrument(m_motor.getDeviceID());
 
     var status = m_motor.setControl(new MotionMagicVoltage(angle));
     Logger.recordOutput("MotorErr/Talon " + m_motor.getDeviceID(), status.toString());
   }
 
+  @Override
   public void follow(int id, boolean inverted) {
-
-    OrchestraOrchestrator.removeInstrument(m_motor.getDeviceID());
 
     var status =
         m_motor.setControl(
@@ -153,17 +196,19 @@ public class TalonIO implements MotorIO {
     Logger.recordOutput("MotorErr/Talon " + m_motor.getDeviceID(), status.toString());
   }
 
+  @Override
   public void brake() {
 
     var status = m_motor.setControl(new VelocityDutyCycle(0.0));
     Logger.recordOutput("MotorErr/Talon " + m_motor.getDeviceID(), status.toString());
-
-    OrchestraOrchestrator.addInstrument(m_motor);
   }
 
+  @Override
   public void resetEncoder(Angle angle) {
 
+    m_position = Rotations.of(0.0);
     var status = m_motor.setPosition(angle);
+
     Logger.recordOutput("MotorErr/Talon " + m_motor.getDeviceID(), status.toString());
   }
 }

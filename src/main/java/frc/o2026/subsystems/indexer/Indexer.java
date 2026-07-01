@@ -8,21 +8,26 @@ package frc.o2026.subsystems.indexer;
 
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
+import frc.lib.hardware.MotorIO;
 import frc.o2026.Configs;
 
 public class Indexer extends SubsystemBase {
-  IndexerIO m_io;
 
-  public Indexer(IndexerIO io) {
+  private MotorIO m_beltIO;
+  private MotorIO m_kickIO;
 
-    m_io = io;
+  public Indexer(MotorIO beltIO, MotorIO kickIO) {
+
+    m_beltIO = beltIO;
+    m_kickIO = kickIO;
   }
 
   public Command off() {
 
     return runOnce(
         () -> {
-          m_io.brakeMotors();
+          m_beltIO.brake();
+          m_kickIO.brake();
         });
   }
 
@@ -30,8 +35,8 @@ public class Indexer extends SubsystemBase {
 
     return runOnce(
         () -> {
-          m_io.setBelts(Configs.Indexer.BeltTurnsPerSec);
-          m_io.setKicker(Configs.Indexer.KickerWheelTurnsPerSec);
+          m_beltIO.setVelocity(Configs.Indexer.BeltTurnsPerSec);
+          m_kickIO.setVelocity(Configs.Indexer.KickerWheelTurnsPerSec);
         });
   }
 
@@ -39,8 +44,8 @@ public class Indexer extends SubsystemBase {
 
     return runOnce(
         () -> {
-          m_io.setBelts(Configs.Indexer.BeltTurnsPerSec.times(-1.0));
-          m_io.setKicker(Configs.Indexer.KickerWheelTurnsPerSec.times(-1.0));
+          m_beltIO.setVelocity(Configs.Indexer.BeltTurnsPerSec.times(-1.0));
+          m_kickIO.setVelocity(Configs.Indexer.KickerWheelTurnsPerSec.times(-1.0));
         });
   }
 }

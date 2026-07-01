@@ -27,7 +27,7 @@ import frc.lib.hardware.MotorConfig;
 import frc.lib.hardware.MotorIO;
 import org.littletonrobotics.junction.Logger;
 
-public class SparkMaxIO implements MotorIO {
+public final class SparkMaxIO implements MotorIO {
 
   private SparkMax m_motor;
   private SparkMaxConfig m_motorConfig;
@@ -87,6 +87,12 @@ public class SparkMaxIO implements MotorIO {
     // Write the configuration to the motor controller
     m_motor.configure(
         m_motorConfig, ResetMode.kResetSafeParameters, PersistMode.kNoPersistParameters);
+  }
+
+  @Override
+  public int getId() {
+
+    return 0; // m_motor.getDeviceID();
   }
 
   public void follow(int id, boolean inverted) {

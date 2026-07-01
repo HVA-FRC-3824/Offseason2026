@@ -12,25 +12,27 @@ import edu.wpi.first.units.measure.Voltage;
 
 public interface MotorIO {
 
-  default void simPeriodic(AngularVelocity velocity) {}
+  public default void simPeriodic() {}
 
-  void config(MotorConfig config);
+  public void config(MotorConfig config);
 
-  void follow(int id, boolean inverted);
+  public int getId();
 
-  void brake();
+  public void follow(int id, boolean inverted);
 
-  void setPosition(Angle angle);
+  public void brake();
 
-  void setVelocity(AngularVelocity angleVel);
+  public void setPosition(Angle angle);
 
-  void resetEncoder(Angle angle);
+  public void setVelocity(AngularVelocity angleVel);
 
-  Voltage getAppliedVoltage();
+  public void resetEncoder(Angle angle);
 
-  Voltage getSupplyVoltage();
+  public Voltage getAppliedVoltage();
 
-  Angle getPos();
+  public Voltage getSupplyVoltage();
 
-  AngularVelocity getVelocity();
+  public Angle getPos();
+
+  public AngularVelocity getVelocity();
 }

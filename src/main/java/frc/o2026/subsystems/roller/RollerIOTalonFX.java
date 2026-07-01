@@ -12,10 +12,10 @@ import frc.lib.hardware.ctre.TalonIO;
 import frc.o2026.Configs;
 import frc.o2026.Constants;
 
-public class RollerTalonFX implements RollerIO {
+public class RollerIOTalonFX implements RollerIO {
   public MotorIO m_motor;
 
-  public RollerTalonFX() {
+  public RollerIOTalonFX() {
 
     m_motor = new TalonIO(Constants.CanIds.FuelIntakeMotorId, Configs.Roller.RollerConfig);
   }

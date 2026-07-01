@@ -1,3 +1,9 @@
+// Copyright (c) 2026-2027 FRC 3824 HVA RoHawktics
+// http://github.com/HVA-FRC-3824
+//
+// Use of this source code is governed by an MIT-style license that can be found in the LICENSE file at
+// the root directory of this project.
+
 package frc.lib.rebuilt;
 
 import static edu.wpi.first.units.Units.Inches;
@@ -30,14 +36,17 @@ public class BallSim {
     ballSim.placeFieldBalls();  // spawns all the game pieces
 
     // tell it about your robot
-    ballSim.configureRobot(Constants.Chassis.TrackWidthMeters.in(Meters), Constants.Chassis.WheelBaseMeters.in(Meters), Inches.of(4.5).in(Meters),
+    ballSim.configureRobot(
+      Constants.Chassis.TrackWidthMeters.in(Meters), 
+      Constants.Chassis.WheelBaseMeters.in(Meters), 
+      Inches.of(4.5).in(Meters),
       () -> RobotState.getInstance().getPoseEst().toPose2d(), () -> RobotState.getInstance().getLastMeasuredSpeeds());
 
     ballSim.addIntakeZone(-0.85 / 2 - 0.2, -0.85 / 2, 
       Constants.Chassis.TrackWidthMeters.in(Meters) / -2, 
       Constants.Chassis.TrackWidthMeters.in(Meters) / 2, 
-      RobotState.getInstance()::isSimIntaking, 
-      RobotState.getInstance()::incrementFuel);
+      () -> RobotState.getInstance().isSimIntaking(), 
+      () -> RobotState.getInstance().incrementFuel());
   }
 
   public void update() {
