@@ -12,7 +12,7 @@ import edu.wpi.first.units.measure.Voltage;
 
 public interface MotorIO {
 
-  public default void simPeriodic() {}
+  public default void periodic() {}
 
   public void config(MotorConfig config);
 
@@ -21,6 +21,8 @@ public interface MotorIO {
   public void follow(int id, boolean inverted);
 
   public void brake();
+
+  public default void setPercent(double percent) {}
 
   public void setPosition(Angle angle);
 

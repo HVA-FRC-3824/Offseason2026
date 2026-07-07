@@ -10,9 +10,7 @@ import static edu.wpi.first.units.Units.Degrees;
 import static edu.wpi.first.units.Units.RPM;
 import static edu.wpi.first.units.Units.RotationsPerSecond;
 
-import edu.wpi.first.math.geometry.Rotation3d;
 import edu.wpi.first.math.geometry.Translation2d;
-import edu.wpi.first.math.geometry.Translation3d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.util.Units;
 import edu.wpi.first.units.measure.AngularVelocity;
@@ -53,11 +51,11 @@ public class Flywheel extends SubsystemBase {
             0.2, // Magnus coeff
             1.225, // air density
             0.43, // exit height (m), floor to where the ball leaves the shooter
-            0.1016, // flywheel diameter (m), measure with calipers
+            Units.inchesToMeters(5.0), // flywheel diameter (m), measure with calipers
             1.83, // target height (m), from game manual
-            0.5, // slip factor (0=no grip, 1=perfect), tune this on the real robot
+            0.7, // slip factor (0=no grip, 1=perfect), tune this on the real robot
             45.0, // launch angle from horizontal, measure from CAD
-            0.001, // sim timestep
+            0.02, // sim timestep
             1500,
             6000,
             25,
@@ -100,11 +98,12 @@ public class Flywheel extends SubsystemBase {
   @Override
   public void periodic() {
 
-    if (RobotBase.isSimulation()) m_teacherIO.simPeriodic();
+    m_teacherIO.periodic();
+    m_studentIO.periodic();
 
     Logger.recordOutput("m-isReady", isReady());
-    Logger.recordOutput("m-flywheel", m_teacherIO.getVelocity());
-    Logger.recordOutput("d-flywheel", m_lastInput);
+    Logger.recordOutput("m-flywheel", m_teacherIO.getVelocity().in(RPM));
+    Logger.recordOutput("d-flywheel", m_lastInput.in(RPM));
   }
 
   public Command off() {
@@ -169,37 +168,28 @@ public class Flywheel extends SubsystemBase {
 
           m_validShot = shot.isValid() && shot.confidence() > 50;
 
-          if (m_validShot) {
+          Logger.runEveryN(
+              10,
+              () -> {
+                if (m_validShot) {
 
-            m_teacherIO.setVelocity(RPM.of(shot.rpm()));
-            m_lastInput = RPM.of(shot.rpm());
+                  m_teacherIO.setVelocity(RPM.of(shot.rpm()));
+                  m_lastInput = RPM.of(shot.rpm());
 
-            if (RobotBase.isSimulation() && RobotState.getInstance().getSimFuelCount() > 0) {
-              RobotState.getInstance().decrementFuel();
+                  // && RobotState.getInstance().getSimFuelCount() > 0
+                  if (RobotBase.isSimulation() && RobotState.getInstance().isSimIndexing()) {
+                    RobotState.getInstance().decrementFuel();
 
-              BallSim.getInstance()
-                  .shoot(
-                      pose.getTranslation(),
-                      new Translation3d(
-                              ProjectileSimulator.rpmToExitVelocity(
-                                  shot.rpm(), Units.inchesToMeters(5.0), 0.5),
-                              0,
-                              0)
-                          .rotateBy(
-                              new Rotation3d(
-                                  Degrees.of(0.0),
-                                  Degrees.of(90 - 27.0),
-                                  pose.getRotation().getMeasureZ())),
-                      new Translation3d(0.0, shot.driveAngularVelocityRadPerSec(), 0.0));
-            }
-          }
+                    BallSim.getInstance().launchAtRPM(pose.toPose2d(), shot.rpm());
+                  }
+                }
+              });
         });
   }
 
   public boolean isReady() {
 
-    return getReference().isNear(m_teacherIO.getPos(), Configs.Flywheel.SpunUpTolerance)
-        && getReference().in(RotationsPerSecond) != 0.0
+    return getReference().isNear(m_teacherIO.getVelocity(), Configs.Flywheel.SpunUpTolerance)
         && m_validShot;
   }
 

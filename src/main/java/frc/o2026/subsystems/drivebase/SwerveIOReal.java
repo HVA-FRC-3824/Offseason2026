@@ -17,7 +17,9 @@ import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.kinematics.SwerveModulePosition;
 import edu.wpi.first.math.kinematics.SwerveModuleState;
 import frc.o2026.Constants;
-import frc.o2026.subsystems.drivebase.vision.Vision;
+import frc.o2026.subsystems.drivebase.poseVision.PoseCameraIO;
+import frc.o2026.subsystems.drivebase.poseVision.PoseCameraIOPhoton;
+import frc.o2026.subsystems.drivebase.poseVision.PoseVision;
 import frc.o2026.subsystems.gyro.GyroIO;
 
 /// @brief Chassis subsystem for swerve drive control
@@ -81,28 +83,26 @@ public class SwerveIOReal implements SwerveIO {
   boolean m_xMode = false;
 
   private GyroIO m_gyroIO;
-  private Vision m_vision =
-      new Vision(
-          (data) ->
-              m_estimator.addVisionMeasurement(
-                  data.visionMeasurement(), data.timestampSeconds(), data.stdDevs()));
+  private PoseVision m_vision;
 
-  public SwerveIOReal(GyroIO gyroIO) {
+  public SwerveIOReal(GyroIO gyroIO, PoseCameraIO... cameras) {
 
     m_gyroIO = gyroIO;
+
+    m_vision =
+        new PoseVision(
+            (data) ->
+                m_estimator.addVisionMeasurement(
+                    data.visionMeasurement(), data.timestampSeconds(), data.stdDevs()),
+            new PoseCameraIOPhoton(Constants.Vision.CameraName1, Constants.Vision.RobotToCam1));
 
     resetWheelAnglesToZero();
 
     m_estimator =
         new SwerveDrivePoseEstimator3d(
             Constants.Chassis.Kinematics,
-            new Rotation3d(), // Initial gyro angle
-            new SwerveModulePosition[] { // Initial module positions
-              new SwerveModulePosition(0, new Rotation2d(0)),
-              new SwerveModulePosition(0, new Rotation2d(0)),
-              new SwerveModulePosition(0, new Rotation2d(0)),
-              new SwerveModulePosition(0, new Rotation2d(0))
-            },
+            m_gyroIO.getGyroRotation(), // Initial gyro angle
+            getModulePositions(),
             new Pose3d(14.0, 7.0, 0.0, new Rotation3d()) // Initial pose
             );
   }
@@ -119,7 +119,7 @@ public class SwerveIOReal implements SwerveIO {
 
     if (m_xMode) {
       // Set the module states to x mode
-      setModuleStates((SwerveModuleState[]) Constants.Chassis.XishStates.toArray());
+      setModuleStates(Constants.Chassis.XishStates.toArray(new SwerveModuleState[0]));
 
       // Save the desired speeds for logging later
       return;
@@ -184,6 +184,12 @@ public class SwerveIOReal implements SwerveIO {
   public void resetPose(Pose2d newPos) {
 
     m_estimator.resetPose(new Pose3d(newPos));
+  }
+
+  @Override
+  public void resetGyro() {
+
+    m_gyroIO.reset();
   }
 
   @Override

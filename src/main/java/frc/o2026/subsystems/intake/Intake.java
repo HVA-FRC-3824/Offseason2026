@@ -6,7 +6,6 @@
 
 package frc.o2026.subsystems.intake;
 
-import static edu.wpi.first.units.Units.Rotations;
 import static edu.wpi.first.units.Units.Seconds;
 
 import edu.wpi.first.units.measure.Angle;
@@ -16,7 +15,7 @@ import edu.wpi.first.wpilibj2.command.WaitCommand;
 import frc.lib.hardware.MotorIO;
 import frc.o2026.Configs;
 import frc.o2026.RobotState;
-import org.ironmaple.simulation.IntakeSimulation;
+import org.littletonrobotics.junction.Logger;
 
 public class Intake extends SubsystemBase {
 
@@ -29,8 +28,11 @@ public class Intake extends SubsystemBase {
     m_io = io;
   }
 
-  public Command starting() {
-    return runOnce(() -> m_desiredAngle = Rotations.of(9999.9));
+  @Override
+  public void periodic() {
+
+    Logger.recordOutput("d-intake", m_desiredAngle);
+    Logger.recordOutput("m-intake", m_io.getPos());
   }
 
   public Command stowed() {
@@ -60,9 +62,5 @@ public class Intake extends SubsystemBase {
         .andThen(deploy())
         .andThen(new WaitCommand(Seconds.of(0.4)))
         .repeatedly();
-  }
-
-  public IntakeSimulation getSimIntake() {
-    return null;
   }
 }

@@ -22,9 +22,13 @@ import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.geometry.Translation3d;
 import edu.wpi.first.math.kinematics.SwerveDriveKinematics;
 import edu.wpi.first.math.kinematics.SwerveModuleState;
+import edu.wpi.first.math.system.plant.DCMotor;
+import edu.wpi.first.math.system.plant.LinearSystemId;
 import edu.wpi.first.math.util.Units;
 import edu.wpi.first.units.measure.Angle;
 import edu.wpi.first.units.measure.Distance;
+import edu.wpi.first.wpilibj.simulation.DCMotorSim;
+import edu.wpi.first.wpilibj.simulation.FlywheelSim;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -82,8 +86,7 @@ public final class Constants {
 
   public static final class Vision {
 
-    public static final String kCameraName1 = "SigmaKamera";
-    public static final String kCameraName2 = "RightCam";
+    public static final String CameraName1 = "RealCam";
 
     public static final Transform3d RobotToCam1 =
         new Transform3d(
@@ -96,27 +99,57 @@ public final class Constants {
                 Degrees.of(0.0), // pitch
                 Degrees.of(180.0))); // yaw
 
-    // some of these probably need to be flipped
-    public static final Transform3d kRobotToCam2 =
+    public static final String CameraName2 = "limelight-athreeg";
+
+    public static final Transform3d RobotToCam2 =
         new Transform3d(
             new Translation3d(
-                Units.inchesToMeters(0.0), Units.inchesToMeters(0.0), Units.inchesToMeters(0.0)),
-            new Rotation3d());
+                Inches.of(0.0), // forwards
+                Inches.of(-15.0), // right
+                Inches.of(0.0)), // up
+            new Rotation3d(
+                Degrees.of(0.0), // roll
+                Degrees.of(0.0), // pitch
+                Degrees.of(90.0))); // yaw
 
-    public static AprilTagFieldLayout kTagLayout =
+    public static AprilTagFieldLayout TagLayout =
         AprilTagFieldLayout.loadField(AprilTagFields.k2026RebuiltWelded);
   }
 
-  public static final class Intake {}
+  public static final class SimModels {
 
-  public static final class Roller {}
+    public static final int FlywheelGearRatio = 1;
+    public static final double FlywheelMOI = 0.001279246;
 
-  public static final class Indexer {}
+    public static final FlywheelSim Flywheel =
+        new FlywheelSim(
+            LinearSystemId.createFlywheelSystem(
+                DCMotor.getKrakenX60(2), FlywheelMOI, FlywheelGearRatio),
+            DCMotor.getKrakenX60(2),
+            0.2);
 
-  public static final class Flywheel {}
+    public static final int IndexerGearRatio = 25;
+    public static final double IndexerMOI = 0.021;
+
+    public static final DCMotorSim Indexer =
+        new DCMotorSim(
+            LinearSystemId.createDCMotorSystem(
+                DCMotor.getKrakenX60(1), IndexerMOI, IndexerGearRatio // MOI from CAD
+                ),
+            DCMotor.getKrakenX60(1));
+
+    public static final int IntakeGearRatio = 25;
+    public static final double IntakeMOI = 0.210408789;
+
+    public static final DCMotorSim Intake =
+        new DCMotorSim(
+            LinearSystemId.createDCMotorSystem(DCMotor.getKrakenX60(2), IntakeMOI, IntakeGearRatio),
+            DCMotor.getKrakenX60(2),
+            1.0,
+            1.0);
+  }
 
   public static final class Chassis {
-
     // NOTE: The absolute encoder range is 0.5 to -0.5
     // These are the absolute encoder values that correspond to the wheels facing "forward"
     public static final Angle FrontRightForwardsAngle =

@@ -4,7 +4,7 @@
 // Use of this source code is governed by an MIT-style license that can be found in the LICENSE file at
 // the root directory of this project.
 
-package frc.o2026.subsystems.drivebase.vision;
+package frc.o2026.subsystems.drivebase.poseVision;
 
 import edu.wpi.first.math.Matrix;
 import edu.wpi.first.math.VecBuilder;
@@ -14,8 +14,7 @@ import edu.wpi.first.math.numbers.N1;
 import edu.wpi.first.math.numbers.N4;
 import frc.o2026.Configs;
 import frc.o2026.Constants;
-import frc.o2026.Robot;
-import frc.o2026.subsystems.drivebase.vision.Vision.VisionData;
+import frc.o2026.subsystems.drivebase.poseVision.PoseVision.VisionData;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -26,7 +25,7 @@ import org.photonvision.simulation.PhotonCameraSim;
 import org.photonvision.simulation.SimCameraProperties;
 import org.photonvision.targeting.PhotonTrackedTarget;
 
-public class Camera {
+public class PoseCameraIOPhotonSim implements PoseCameraIO {
 
   private Matrix<N4, N1> curStdDevs = Configs.Vision.kSingleTagStdDevs;
 
@@ -43,26 +42,23 @@ public class Camera {
 
   boolean m_ignored;
 
-  public Camera(String name, Transform3d m_offset) {
+  public PoseCameraIOPhotonSim(String name, Transform3d m_offset) {
 
     m_camera = new PhotonCamera(name);
-    estimator = new PhotonPoseEstimator(Constants.Vision.kTagLayout, m_offset);
+    estimator = new PhotonPoseEstimator(Constants.Vision.TagLayout, m_offset);
 
     this.m_offset = m_offset;
 
-    if (Robot.isSimulation()) {
+    SimCameraProperties cameraProp = new SimCameraProperties();
+    cameraProp.setCalibration(m_xRes, m_yRes, Rotation2d.fromDegrees(m_fov));
+    cameraProp.setCalibError(0.35, 0.10);
+    cameraProp.setFPS(m_fps);
+    cameraProp.setAvgLatencyMs(50);
+    cameraProp.setLatencyStdDevMs(15);
 
-      SimCameraProperties cameraProp = new SimCameraProperties();
-      cameraProp.setCalibration(m_xRes, m_yRes, Rotation2d.fromDegrees(m_fov));
-      cameraProp.setCalibError(0.35, 0.10);
-      cameraProp.setFPS(m_fps);
-      cameraProp.setAvgLatencyMs(50);
-      cameraProp.setLatencyStdDevMs(15);
+    m_simCamera = new PhotonCameraSim(m_camera, cameraProp);
 
-      m_simCamera = new PhotonCameraSim(m_camera, cameraProp);
-
-      m_simCamera.enableDrawWireframe(true);
-    }
+    m_simCamera.enableDrawWireframe(true);
   }
 
   public ArrayList<VisionData> getMeasurements() {

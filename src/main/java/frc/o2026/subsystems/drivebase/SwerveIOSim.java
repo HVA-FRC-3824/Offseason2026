@@ -18,7 +18,7 @@ import edu.wpi.first.math.kinematics.SwerveModuleState;
 import edu.wpi.first.math.system.plant.DCMotor;
 import frc.lib.rebuilt.RobotBumpSim;
 import frc.o2026.Constants;
-import frc.o2026.subsystems.drivebase.vision.Vision;
+import frc.o2026.subsystems.drivebase.poseVision.PoseVision;
 import org.ironmaple.simulation.SimulatedArena;
 import org.ironmaple.simulation.drivesims.COTS;
 import org.ironmaple.simulation.drivesims.SelfControlledSwerveDriveSimulation;
@@ -63,8 +63,8 @@ public class SwerveIOSim implements SwerveIO {
 
   private RobotBumpSim m_robotBumpSim = new RobotBumpSim(Constants.Chassis.ModulePositions);
 
-  private Vision m_vision =
-      new Vision(
+  private PoseVision m_vision =
+      new PoseVision(
           (data) ->
               m_swerveDriveSimulation.addVisionEstimation(
                   data.visionMeasurement().toPose2d(),

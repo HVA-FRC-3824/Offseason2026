@@ -48,13 +48,21 @@ public class SwerveModule {
                         .withSensorDirection(SensorDirectionValue.CounterClockwise_Positive)));
   }
 
+  public void periodic() {
+
+    m_angleMotor.resetEncoder(Degrees.of(getAbsoluteEncoderAngle()));
+  }
+
   public void setDesiredState(SwerveModuleState desiredState) {
-    desiredState.optimize(getPosition().angle);
 
     m_drivingMotor.setVelocity(
         RotationsPerSecond.of(
-            desiredState.speedMetersPerSecond * Constants.Chassis.DriveMotorConversion));
+            desiredState.speedMetersPerSecond / Constants.Chassis.DriveMotorConversion));
     m_angleMotor.setPosition(desiredState.angle.getMeasure());
+
+    if (desiredState.speedMetersPerSecond == 0.0) {
+      m_drivingMotor.brake();
+    }
   }
 
   public SwerveModuleState getState() {

@@ -63,7 +63,6 @@ public class OrchestraOrchestrator {
     Cynthia("cynthia.chrp"),
     GymLeader("gymleader.chrp"),
     Birthday("happybirthday.chrp"),
-    Pirates("POTC.chrp"),
     Song2("song2.chrp"),
     Tetris("tetris.chrp"),
     UnderTheSea("underthesea.chrp");

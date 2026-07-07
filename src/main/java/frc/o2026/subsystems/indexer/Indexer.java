@@ -10,6 +10,7 @@ import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.lib.hardware.MotorIO;
 import frc.o2026.Configs;
+import frc.o2026.RobotState;
 
 public class Indexer extends SubsystemBase {
 
@@ -26,6 +27,7 @@ public class Indexer extends SubsystemBase {
 
     return runOnce(
         () -> {
+          RobotState.getInstance().setSimIndexing(false);
           m_beltIO.brake();
           m_kickIO.brake();
         });
@@ -35,6 +37,7 @@ public class Indexer extends SubsystemBase {
 
     return runOnce(
         () -> {
+          RobotState.getInstance().setSimIndexing(true);
           m_beltIO.setVelocity(Configs.Indexer.BeltTurnsPerSec);
           m_kickIO.setVelocity(Configs.Indexer.KickerWheelTurnsPerSec);
         });
@@ -44,6 +47,7 @@ public class Indexer extends SubsystemBase {
 
     return runOnce(
         () -> {
+          RobotState.getInstance().setSimIndexing(false);
           m_beltIO.setVelocity(Configs.Indexer.BeltTurnsPerSec.times(-1.0));
           m_kickIO.setVelocity(Configs.Indexer.KickerWheelTurnsPerSec.times(-1.0));
         });

@@ -9,7 +9,9 @@ package frc.lib.rebuilt;
 import static edu.wpi.first.units.Units.Inches;
 import static edu.wpi.first.units.Units.Meters;
 
+import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Translation3d;
+import edu.wpi.first.math.util.Units;
 import frc.lib.rebuilt.firecontrol.FuelPhysicsSim;
 import frc.o2026.Constants;
 import frc.o2026.RobotState;
@@ -54,8 +56,19 @@ public class BallSim {
     ballSim.tick();
   }
 
-  public void shoot(Translation3d pos, Translation3d vel, Translation3d omega) {
+  public void launchAtRPM(Pose2d robotPose, double shooterRPM) {
+    
+    Translation3d launchPos = new Translation3d(robotPose.getX(), robotPose.getY(), Units.inchesToMeters(20.0));
 
-    ballSim.launchBall(pos, vel, omega);
+    double launchAngleRad = Math.toRadians(90-27);
+    double exitSpeed = 0.7 * shooterRPM * Math.PI * Units.inchesToMeters(5.0) / 60.0;
+    double vHorizontal = exitSpeed * Math.cos(launchAngleRad);
+    double vVertical = exitSpeed * Math.sin(launchAngleRad);
+
+    double vx = vHorizontal * Math.cos(robotPose.getRotation().getRadians());
+    double vy = vHorizontal * Math.sin(robotPose.getRotation().getRadians());
+
+    Translation3d launchVel = new Translation3d(vx, vy, vVertical);
+    ballSim.launchBall(launchPos, launchVel, 2000.0);
   }
 }

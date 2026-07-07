@@ -99,6 +99,7 @@ public class Configs {
 
     public static final MotorConfig Config =
         new MotorConfig()
+            .withSupplyCurrent(Amps.of(40.0))
             .withStatorCurrent(Amps.of(85.0))
             .withInverted(false)
             .withBrakeMode(false)
@@ -112,8 +113,8 @@ public class Configs {
     public static final AngularVelocity FieldPassSpeed = RotationsPerSecond.of(85.0);
     public static final AngularVelocity NeutralPassSpeed = RotationsPerSecond.of(65.0);
 
-    // as a percentage of the reference (3tps tolerance at 100tps reference)
-    public static final double SpunUpTolerance = 3.0;
+    // as a percentage of the reference (10tps tolerance at 100tps reference)
+    public static final double SpunUpTolerance = 10.0;
   }
 
   public static final class Chassis {
@@ -126,9 +127,8 @@ public class Configs {
             .withInverted(false)
             .withContinuousWrap(false)
             .withP(0.1)
-            .withA(0.0)
-            .withVelocityLimit(RotationsPerSecond.of(100)) // Max free speed
-            .withAccelerationLimit(RotationsPerSecondPerSecond.of(200)); // reach in 0.5 sec
+            .withVelocityLimit(RotationsPerSecond.of(10))
+            .withAccelerationLimit(RotationsPerSecondPerSecond.of(10));
 
     public static final MotorConfig TurnConfig =
         new MotorConfig()
@@ -137,10 +137,10 @@ public class Configs {
             .withInverted(true)
             .withBrakeMode(true)
             .withContinuousWrap(true)
-            .withP(0.01)
-            .withD(0.0002)
+            .withP(3.5)
+            .withD(0.05)
             .withSensorToMechanismRatio(21.5)
-            .withVelocityLimit(RotationsPerSecond.of(20))
+            .withVelocityLimit(RotationsPerSecond.of(100))
             .withAccelerationLimit(RotationsPerSecondPerSecond.of(200));
 
     public static final LinearVelocity MaximumLinear = FeetPerSecond.of(12.0);

@@ -10,6 +10,7 @@ import com.ctre.phoenix6.hardware.Pigeon2;
 import edu.wpi.first.math.geometry.Rotation3d;
 import edu.wpi.first.units.measure.AngularVelocity;
 import frc.o2026.Constants;
+import org.littletonrobotics.junction.Logger;
 
 public class GyroPigeon implements GyroIO {
   Pigeon2 m_gyro;
@@ -31,6 +32,7 @@ public class GyroPigeon implements GyroIO {
 
   @Override
   public void reset() {
+    Logger.recordOutput("I am being called", m_gyro.getRotation2d().getDegrees());
     m_gyro.reset();
   }
 }

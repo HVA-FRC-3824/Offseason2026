@@ -4,7 +4,7 @@
 // Use of this source code is governed by an MIT-style license that can be found in the LICENSE file at
 // the root directory of this project.
 
-package frc.o2026.subsystems.drivebase.vision;
+package frc.o2026.subsystems.drivebase.poseVision;
 
 import edu.wpi.first.apriltag.AprilTagFieldLayout;
 import edu.wpi.first.apriltag.AprilTagFields;
@@ -16,12 +16,12 @@ import edu.wpi.first.math.numbers.N1;
 import edu.wpi.first.math.numbers.N3;
 import edu.wpi.first.math.numbers.N4;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
-import frc.o2026.Constants;
 import frc.o2026.Robot;
 import java.util.function.Consumer;
+import org.littletonrobotics.junction.Logger;
 import org.photonvision.simulation.VisionSystemSim;
 
-public class Vision extends SubsystemBase {
+public class PoseVision extends SubsystemBase {
 
   public static AprilTagFieldLayout fieldAprilTags =
       AprilTagFieldLayout.loadField(AprilTagFields.k2026RebuiltWelded);
@@ -32,18 +32,18 @@ public class Vision extends SubsystemBase {
 
   private int m_lastSeenTag = 0;
 
-  public Camera[] cameras =
-      new Camera[] {new Camera(Constants.Vision.kCameraName1, Constants.Vision.RobotToCam1)};
+  public PoseCameraIO[] m_cameras;
 
-  public Vision(Consumer<VisionData> poseEstimatorConsumer) {
+  public PoseVision(Consumer<VisionData> poseEstimatorConsumer, PoseCameraIO... cameras) {
 
     m_poseEstimatorConsumer = poseEstimatorConsumer;
+    m_cameras = cameras;
 
     if (Robot.isSimulation()) {
       visionSim = new VisionSystemSim("main");
       visionSim.addAprilTags(fieldAprilTags);
 
-      for (Camera m_camera : cameras) {
+      for (PoseCameraIO m_camera : cameras) {
         visionSim.addCamera(m_camera.getSimCamera(), m_camera.getOffset());
       }
     }
@@ -56,21 +56,20 @@ public class Vision extends SubsystemBase {
 
   public void update(Pose2d simRealPos) {
 
-    for (Camera camera : cameras)
-      for (VisionData data : camera.getMeasurements()) m_poseEstimatorConsumer.accept(data);
-
-    // This just checks if the there is a measurement,
-    // then if there are any tags in that measurement
-    // then it takes the first tag of that measurement
-    // and makes that the last seen tag
-    if (cameras[0].getMeasurements().size() > 0) {
-      if (cameras[0].getMeasurements().get(cameras[0].getMeasurements().size() - 1).target().length
-          > 0) {
-
-        m_lastSeenTag =
-            cameras[0].getMeasurements().get(cameras[0].getMeasurements().size() - 1).target()[0];
+    for (PoseCameraIO camera : m_cameras) {
+      for (VisionData data : camera.getMeasurements()) {
+        m_poseEstimatorConsumer.accept(data);
       }
     }
+
+    try {
+
+      m_lastSeenTag = m_cameras[0].getMeasurements().get(0).target()[0];
+    } catch (Exception e) {
+
+    }
+
+    Logger.recordOutput("lastSeenTag", PoseCameraIO.getTagPose(m_lastSeenTag));
 
     if (simRealPos != null) visionSim.update(simRealPos);
   }
@@ -78,11 +77,6 @@ public class Vision extends SubsystemBase {
   public int getLastSeenTag() {
 
     return m_lastSeenTag;
-  }
-
-  public static Pose3d getTagPose(int fiduciary) {
-
-    return Constants.Vision.kTagLayout.getTagPose(fiduciary).orElse(new Pose3d());
   }
 
   public record VisionData(

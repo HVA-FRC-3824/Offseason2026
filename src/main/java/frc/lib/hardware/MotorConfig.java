@@ -39,7 +39,7 @@ public class MotorConfig {
     statorCurrent = Amps.of(0.0);
     inverted = false;
     brakeMode = true;
-    continuousWrap = true;
+    continuousWrap = false;
     P = 0.0;
     I = 0.0;
     D = 0.0;

@@ -57,7 +57,7 @@ public class RollerIOSim implements RollerIO {
   @Override
   public void periodic() {
 
-    m_motor.simPeriodic();
+    m_motor.periodic();
   }
 
   @Override

@@ -40,6 +40,8 @@ public interface SwerveIO {
 
   public void resetPose(Pose2d newPos);
 
+  public default void resetGyro() {}
+
   public void setIsXMode(boolean xMode);
 
   public boolean getIsXMode();

@@ -6,7 +6,7 @@
 
 package frc.lib.hardware.rev;
 
-import static edu.wpi.first.units.Units.Degrees;
+import static edu.wpi.first.units.Units.Amps;
 import static edu.wpi.first.units.Units.Rotations;
 import static edu.wpi.first.units.Units.RotationsPerSecond;
 import static edu.wpi.first.units.Units.Volt;
@@ -40,12 +40,6 @@ public final class SparkMaxIO implements MotorIO {
     m_motorConfig = new SparkMaxConfig();
     m_encoder = m_motor.getEncoder();
     m_controller = m_motor.getClosedLoopController();
-
-    Logger.runEveryN(
-        1,
-        () ->
-            Logger.recordOutput(
-                "MotorErr/SparkMax " + m_motor.getDeviceId(), m_motor.getLastError().toString()));
   }
 
   public SparkMaxIO(int id, MotorConfig config) {
@@ -60,21 +54,19 @@ public final class SparkMaxIO implements MotorIO {
     m_motorConfig
         .closedLoop
         .pid(config.getP(), config.getI(), config.getD())
-        .positionWrappingEnabled(true);
+        .positionWrappingEnabled(config.isContinuousWrap());
 
     m_motorConfig
         .inverted(config.isInverted())
         .idleMode(config.isBrakeMode() ? IdleMode.kBrake : IdleMode.kCoast);
 
-    // m_motorConfig.smartCurrentLimit(
-    //   (int) config.statorCurrent().in(Amps),
-    //   (int) config.supplyCurrent().in(Amps));
+    m_motorConfig.smartCurrentLimit((int) config.getStatorCurrent().in(Amps));
 
     m_motorConfig
         .encoder
-        .positionConversionFactor((1 / config.getSensorToMechanismRatio()))
+        .positionConversionFactor(1.0 / config.getSensorToMechanismRatio())
         .velocityConversionFactor(
-            (1 / config.getSensorToMechanismRatio())
+            (1.0 / config.getSensorToMechanismRatio())
                 / 60.0); // Div by 60 because its in RPM by default
 
     m_motorConfig
@@ -86,13 +78,20 @@ public final class SparkMaxIO implements MotorIO {
 
     // Write the configuration to the motor controller
     m_motor.configure(
-        m_motorConfig, ResetMode.kResetSafeParameters, PersistMode.kNoPersistParameters);
+        m_motorConfig, ResetMode.kNoResetSafeParameters, PersistMode.kNoPersistParameters);
   }
 
   @Override
   public int getId() {
 
-    return 0; // m_motor.getDeviceID();
+    return m_motor.getDeviceId();
+  }
+
+  @Override
+  public void periodic() {
+
+    Logger.recordOutput(
+        "MotorErr/SparkMax " + m_motor.getDeviceId(), m_motor.getLastError().toString());
   }
 
   public void follow(int id, boolean inverted) {
@@ -108,6 +107,12 @@ public final class SparkMaxIO implements MotorIO {
     m_motor.set(0.0);
   }
 
+  @Override
+  public void setPercent(double percent) {
+
+    m_motor.set(percent);
+  }
+
   public void setPosition(Angle angle) {
 
     m_controller.setSetpoint(angle.in(Rotations), ControlType.kPosition);
@@ -120,7 +125,7 @@ public final class SparkMaxIO implements MotorIO {
 
   public void resetEncoder(Angle angle) {
 
-    m_encoder.setPosition(angle.in(Degrees));
+    m_encoder.setPosition(angle.in(Rotations));
   }
 
   public Voltage getAppliedVoltage() {

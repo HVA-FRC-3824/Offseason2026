@@ -113,7 +113,7 @@ public class MotorSimIO implements MotorIO {
   }
 
   @Override
-  public void simPeriodic() {
+  public void periodic() {
 
     var talonFXSim = m_motor.getSimState();
     talonFXSim.setMotorType(m_simType);

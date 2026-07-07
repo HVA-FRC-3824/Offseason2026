@@ -52,10 +52,10 @@ public class MotorIOGroup implements MotorIO {
   }
 
   @Override
-  public void simPeriodic() {
+  public void periodic() {
 
     for (MotorIO motor : m_motors) {
-      motor.simPeriodic();
+      motor.periodic();
     }
   }
 

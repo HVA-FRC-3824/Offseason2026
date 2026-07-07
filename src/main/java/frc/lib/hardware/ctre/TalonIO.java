@@ -34,7 +34,7 @@ public class TalonIO implements MotorIO {
   final Supplier<Angle> m_posSupplier;
   final Supplier<AngularVelocity> m_velSupplier;
 
-  public TalonIO(int id, boolean isX60) {
+  public TalonIO(int id) {
 
     m_motor = new TalonFX(id);
     m_posSupplier = m_motor.getPosition().asSupplier();
@@ -43,21 +43,11 @@ public class TalonIO implements MotorIO {
     OrchestraOrchestrator.addInstrument(m_motor);
   }
 
-  public TalonIO(int id, MotorConfig config, boolean isX60) {
-
-    this(id, isX60);
-
-    config(config);
-  }
-
   public TalonIO(int id, MotorConfig config) {
 
-    this(id, config, true);
-  }
+    this(id);
 
-  public TalonIO(int id) {
-
-    this(id, true);
+    config(config);
   }
 
   public void config(MotorConfig config) {
@@ -65,12 +55,9 @@ public class TalonIO implements MotorIO {
     TalonFXConfiguration talonConfig = new TalonFXConfiguration();
 
     talonConfig.CurrentLimits.SupplyCurrentLimit = config.getSupplyCurrent().in(Amps);
-    talonConfig.CurrentLimits.SupplyCurrentLimitEnable = true;
+    talonConfig.CurrentLimits.SupplyCurrentLimitEnable = config.getSupplyCurrent().in(Amps) != 0;
     talonConfig.CurrentLimits.StatorCurrentLimit = config.getStatorCurrent().in(Amps);
-    talonConfig.CurrentLimits.StatorCurrentLimitEnable = true;
-
-    talonConfig.CurrentLimits.SupplyCurrentLimitEnable = false;
-    talonConfig.CurrentLimits.StatorCurrentLimitEnable = false;
+    talonConfig.CurrentLimits.StatorCurrentLimitEnable = config.getStatorCurrent().in(Amps) != 0;
 
     talonConfig.MotorOutput.Inverted =
         config.isInverted()
@@ -94,6 +81,8 @@ public class TalonIO implements MotorIO {
         config.getVelocityLimit().in(RotationsPerSecond);
     talonConfig.MotionMagic.MotionMagicAcceleration =
         config.getAccelerationLimit().in(RotationsPerSecondPerSecond);
+
+    talonConfig.Audio.AllowMusicDurDisable = true;
 
     var status = m_motor.getConfigurator().apply(talonConfig);
 
