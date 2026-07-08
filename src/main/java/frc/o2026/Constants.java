@@ -31,6 +31,7 @@ import edu.wpi.first.wpilibj.simulation.DCMotorSim;
 import edu.wpi.first.wpilibj.simulation.FlywheelSim;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 public final class Constants {
 
@@ -82,6 +83,11 @@ public final class Constants {
             FieldLengthMeters - AllianceWallToAllianceZoneMeters,
             FieldWidthMeters - (FieldWidthMeters / 4),
             new Rotation2d());
+
+    public static Map<Integer, String> GamepieceNames =
+        Map.of(
+            0, "Fuel",
+            1, "null");
   }
 
   public static final class Vision {
@@ -93,7 +99,7 @@ public final class Constants {
             new Translation3d(
                 Inches.of(-15.0), // forwards
                 Inches.of(0.0), // right
-                Inches.of(0.0)), // up
+                Inches.of(3.0)), // up
             new Rotation3d(
                 Degrees.of(0.0), // roll
                 Degrees.of(0.0), // pitch
@@ -106,11 +112,24 @@ public final class Constants {
             new Translation3d(
                 Inches.of(0.0), // forwards
                 Inches.of(-15.0), // right
-                Inches.of(0.0)), // up
+                Inches.of(5.0)), // up
             new Rotation3d(
                 Degrees.of(0.0), // roll
                 Degrees.of(0.0), // pitch
                 Degrees.of(90.0))); // yaw
+
+    public static final String CameraName3 = "BadCam";
+
+    public static final Transform3d RobotToCam3 =
+        new Transform3d(
+            new Translation3d(
+                Inches.of(15.0), // forwards
+                Inches.of(-2.0), // right
+                Inches.of(3.0)), // up
+            new Rotation3d(
+                Degrees.of(0.0), // roll
+                Degrees.of(0.0), // pitch
+                Degrees.of(180.0))); // yaw
 
     public static AprilTagFieldLayout TagLayout =
         AprilTagFieldLayout.loadField(AprilTagFields.k2026RebuiltWelded);

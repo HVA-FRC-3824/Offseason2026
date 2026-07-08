@@ -22,6 +22,8 @@ import frc.lib.hardware.ctre.OrchestraOrchestrator.Song;
 import frc.o2026.subsystems.drivebase.Swerve;
 import frc.o2026.subsystems.drivebase.SwerveIOReal;
 import frc.o2026.subsystems.drivebase.SwerveIOSim;
+import frc.o2026.subsystems.drivebase.objectVision.ObjectCameraIOPhoton;
+import frc.o2026.subsystems.drivebase.objectVision.ObjectVision;
 import frc.o2026.subsystems.drivebase.poseVision.PoseCameraIOLimelight;
 import frc.o2026.subsystems.drivebase.poseVision.PoseCameraIOPhoton;
 import frc.o2026.subsystems.gyro.GyroPigeon;
@@ -33,13 +35,18 @@ public class RobotContainer extends SubsystemBase {
           RobotBase.isReal()
               ? new SwerveIOReal(
                   new GyroPigeon(),
-                  new PoseCameraIOPhoton(Constants.Vision.CameraName1, Constants.Vision.RobotToCam1),
+                  new PoseCameraIOPhoton(
+                      Constants.Vision.CameraName3, Constants.Vision.RobotToCam3),
                   new PoseCameraIOLimelight(
                       Constants.Vision.CameraName2,
                       Constants.Vision.RobotToCam2,
                       () -> RobotState.getInstance().getPoseEst().getRotation(),
                       () -> RobotState.getInstance().getAngularVelocity()))
               : new SwerveIOSim());
+
+  private ObjectVision m_odVision =
+      new ObjectVision(
+          new ObjectCameraIOPhoton(Constants.Vision.CameraName1, Constants.Vision.RobotToCam1));
 
   //   private Roller m_roller = new Roller(new RollerIOTalonFX());
 
@@ -114,6 +121,22 @@ public class RobotContainer extends SubsystemBase {
     m_driver.y().onTrue(m_swerve.fieldCentricityToggle());
 
     m_driver
+        .leftBumper()
+        .whileTrue(
+            Commands.parallel(
+                m_swerve
+                    .aimMove(
+                        () -> new ChassisSpeeds(0.2, 0.0, 0.0),
+                        () -> m_odVision.directionToObject(0, m_swerve.getPose().toPose2d()),
+                        true)
+                    .onlyWhile(() -> m_odVision.hasObjects(0))));
+
+    m_driver
+        .rightBumper()
+        .whileTrue(
+            m_swerve.aimMove(this::getSpeeds, RobotState.getInstance()::getSOTMRotTarget, false));
+
+    m_driver
         .b()
         .onTrue(new InstantCommand(() -> OrchestraOrchestrator.playSong(Song.GymLeader), m_swerve));
 
@@ -128,7 +151,7 @@ public class RobotContainer extends SubsystemBase {
     //         Commands.parallel(
     //             m_flywheel.auto(),
     //             m_swerve.aimSOTM(this::getSpeeds),
-    //             m_indexer.on().onlyWhile(m_flywheel::isReady).onlyWhile(m_swerve::isAimedSOTM),
+    //             m_indexer.on().onlyWhile(m_flywheel::isReady).onlyWhile(m_swerve::isAimed),
     //             m_intake.alligator()));
 
     // ControlMode.Teleop.getTrigger()
@@ -152,7 +175,7 @@ public class RobotContainer extends SubsystemBase {
     //                     m_indexer
     //                         .on()
     //                         .onlyWhile(m_flywheel::isReady)
-    //                         .onlyWhile(m_swerve::isAimedSOTM),
+    //                         .onlyWhile(m_swerve::isAimed),
     //                     m_intake.alligator())
     //                 .repeatedly()));
   }

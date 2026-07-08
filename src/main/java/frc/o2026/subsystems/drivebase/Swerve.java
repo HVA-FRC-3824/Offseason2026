@@ -33,8 +33,6 @@ public class Swerve extends SubsystemBase {
 
   private boolean m_fieldCentricity = true;
 
-  private boolean m_aiming = false;
-
   private PIDController m_xController = new PIDController(2, 0, 0);
   private PIDController m_yController = new PIDController(2, 0, 0);
   private PIDController m_rotController = new PIDController(2, 0, 0);
@@ -85,10 +83,9 @@ public class Swerve extends SubsystemBase {
     Logger.recordOutput("Swerve/m-speeds", getChassisSpeeds());
     Logger.recordOutput("Swerve/m-pose", getPose());
     Logger.recordOutput("Swerve/m-heading", getHeading());
-    Logger.recordOutput("Swerve/m-aimed", isAimedSOTM());
+    Logger.recordOutput("Swerve/m-aimed", isAimed());
 
     Logger.recordOutput("Swerve/d-aimed", Radians.of(m_rotController.getSetpoint()).in(Degrees));
-    Logger.recordOutput("Swerve/d-aiming", m_aiming);
   }
 
   public ChassisSpeeds getChassisSpeeds() {
@@ -115,14 +112,10 @@ public class Swerve extends SubsystemBase {
 
   private void drive(ChassisSpeeds speeds, boolean fieldRelative) {
 
-    if (m_aiming) {
-      speeds.omegaRadiansPerSecond = m_rotController.calculate(getHeading().getRadians());
-    }
-
     var desiredStates =
         m_fieldCentricity
             ? ChassisSpeeds.fromFieldRelativeSpeeds(
-                speeds, (Alliance.isRed() ? getHeading() : getHeading().plus(Rotation2d.k180deg)))
+                speeds, (Alliance.isRed() ? getHeading().plus(Rotation2d.k180deg) : getHeading()))
             : speeds;
 
     m_io.driveRobotRelative(desiredStates);
@@ -132,22 +125,22 @@ public class Swerve extends SubsystemBase {
         "d-states", Constants.Chassis.Kinematics.toSwerveModuleStates(desiredStates));
   }
 
-  private void drive(ChassisSpeeds speeds) {
-
-    drive(speeds, m_fieldCentricity);
-  }
-
   public Command resetSwerveModules() {
 
     return runOnce(() -> m_io.resetWheelAnglesToZero()).withName("resetSwerveModules");
   }
 
-  public Command drive(Supplier<ChassisSpeeds> speedsSupplier) {
+  public Command drive(Supplier<ChassisSpeeds> speedsSupplier, boolean fieldCentric) {
 
     return run(() -> {
-          drive(speedsSupplier.get());
+          drive(speedsSupplier.get(), fieldCentric);
         })
         .withName("Drive");
+  }
+
+  public Command drive(Supplier<ChassisSpeeds> speedsSupplier) {
+
+    return drive(speedsSupplier, m_fieldCentricity);
   }
 
   public Command ppPathPose(Pose2d pose) {
@@ -160,15 +153,18 @@ public class Swerve extends SubsystemBase {
 
   public Command pidPathPose(Supplier<Pose2d> poseSupplier) {
 
-    return run(() -> {
-      var targetPose = poseSupplier.get();
-      var currPose = getPose();
-      drive(
-        new ChassisSpeeds(
-          m_xController.calculate(currPose.getX(), targetPose.getX()), 
-          m_yController.calculate(currPose.getY(), targetPose.getY()), 
-          m_rotController.calculate(currPose.getRotation().getZ(), targetPose.getRotation().getRadians())), true);
-    });
+    return run(
+        () -> {
+          var targetPose = poseSupplier.get();
+          var currPose = getPose();
+          drive(
+              new ChassisSpeeds(
+                  m_xController.calculate(currPose.getX(), targetPose.getX()),
+                  m_yController.calculate(currPose.getY(), targetPose.getY()),
+                  m_rotController.calculate(
+                      currPose.getRotation().getZ(), targetPose.getRotation().getRadians())),
+              true);
+        });
   }
 
   public Command aimSOTM() {
@@ -178,16 +174,31 @@ public class Swerve extends SubsystemBase {
 
   public Command aim(Supplier<Rotation2d> angleSupplier) {
 
-    return runEnd(
-            () -> {
-              m_aiming = true;
-              m_rotController.setSetpoint(angleSupplier.get().getRadians());
-            },
-            () -> m_aiming = false)
-        .withName("Aim");
+    return aimMove(ChassisSpeeds::new, angleSupplier, false).withName("Aim");
   }
 
-  public boolean isAimedSOTM() {
+  public Command aimMove(
+      Supplier<ChassisSpeeds> speedsSupplier,
+      Supplier<Rotation2d> angleSupplier,
+      boolean moveWhenAimed) {
+
+    return run(() -> {
+          drive(
+              new ChassisSpeeds(
+                  moveWhenAimed
+                      ? (isAimed() ? speedsSupplier.get().vxMetersPerSecond : 0.0)
+                      : speedsSupplier.get().vxMetersPerSecond,
+                  moveWhenAimed
+                      ? (isAimed() ? speedsSupplier.get().vyMetersPerSecond : 0.0)
+                      : speedsSupplier.get().vyMetersPerSecond,
+                  m_rotController.calculate(
+                      m_io.getGyroHeading().getRadians(), angleSupplier.get().getRadians())),
+              m_fieldCentricity);
+        })
+        .withName("AimMove");
+  }
+
+  public boolean isAimed() {
 
     return m_rotController.atSetpoint();
   }

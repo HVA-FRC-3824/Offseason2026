@@ -20,7 +20,6 @@ import frc.o2026.subsystems.drivebase.poseVision.PoseVision.VisionData;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Supplier;
-import java.util.stream.IntStream;
 import org.littletonrobotics.junction.Logger;
 
 /**
@@ -83,8 +82,7 @@ public class PoseCameraIOLimelight implements PoseCameraIO {
             ? LimelightHelpers.getBotPoseEstimate_wpiRed_MegaTag2(m_name)
             : LimelightHelpers.getBotPoseEstimate_wpiBlue_MegaTag2(m_name);
 
-    int[] tags =
-        List.of(mt2.rawFiducials).stream().flatMapToInt((tag) -> IntStream.of(tag.id)).toArray();
+    int[] tags = List.of(mt2.rawFiducials).stream().mapToInt((tag) -> tag.id).toArray();
 
     var measurements = new ArrayList<VisionData>(1);
     measurements.add(
