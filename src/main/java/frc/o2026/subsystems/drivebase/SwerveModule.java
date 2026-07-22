@@ -17,9 +17,10 @@ import com.ctre.phoenix6.signals.SensorDirectionValue;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.kinematics.SwerveModulePosition;
 import edu.wpi.first.math.kinematics.SwerveModuleState;
-import frc.lib.hardware.MotorIO;
-import frc.lib.hardware.ctre.TalonIO;
-import frc.lib.hardware.rev.SparkMaxIO;
+import edu.wpi.first.units.measure.Angle;
+import frc.lib.hardware.motor.MotorIO;
+import frc.lib.hardware.motor.ctre.TalonIO;
+import frc.lib.hardware.motor.rev.SparkMaxIO;
 import frc.o2026.Configs;
 import frc.o2026.Constants;
 
@@ -48,21 +49,21 @@ public class SwerveModule {
                         .withSensorDirection(SensorDirectionValue.CounterClockwise_Positive)));
   }
 
-  public void periodic() {
-
-    m_angleMotor.resetEncoder(Degrees.of(getAbsoluteEncoderAngle()));
-  }
-
   public void setDesiredState(SwerveModuleState desiredState) {
 
     m_drivingMotor.setVelocity(
         RotationsPerSecond.of(
             desiredState.speedMetersPerSecond / Constants.Chassis.DriveMotorConversion));
+
     m_angleMotor.setPosition(desiredState.angle.getMeasure());
 
-    if (desiredState.speedMetersPerSecond == 0.0) {
-      m_drivingMotor.brake();
-    }
+    // if (desiredState.angle.getMeasure() == m_angleMotor.getPos()) {
+    //   m_angleMotor.brake();
+    // }
+
+    // if (desiredState.speedMetersPerSecond == 0.0) {
+    //   m_drivingMotor.brake();
+    // }
   }
 
   public SwerveModuleState getState() {
@@ -84,15 +85,9 @@ public class SwerveModule {
     m_drivingMotor.resetEncoder(Degrees.of(0.0));
   }
 
-  public void setWheelAngleToForward(double forwardAngleDeg) {
+  public void setWheelAngleToForward(Angle forwardAngle) {
 
-    double moveDegrees = getAbsoluteEncoderAngle() - forwardAngleDeg;
-
-    m_angleMotor.resetEncoder(Degrees.of(moveDegrees));
-    m_angleMotor.setPosition(Rotations.of(0.0));
-  }
-
-  private double getAbsoluteEncoderAngle() {
-    return angleAbsoluteEncoder.getAbsolutePosition().getValue().in(Degrees);
+    m_angleMotor.resetEncoder(
+        angleAbsoluteEncoder.getAbsolutePosition().getValue().minus(forwardAngle));
   }
 }

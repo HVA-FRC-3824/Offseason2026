@@ -18,12 +18,16 @@ import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Pose3d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
+import edu.wpi.first.math.util.Units;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.lib.Alliance;
 import frc.o2026.Configs;
 import frc.o2026.Constants;
 import frc.o2026.RobotState;
+import frc.robot.lib.BLine.FollowPath;
+import frc.robot.lib.BLine.Path;
+import java.util.Optional;
 import java.util.function.Supplier;
 import org.littletonrobotics.junction.Logger;
 
@@ -33,20 +37,25 @@ public class Swerve extends SubsystemBase {
 
   private boolean m_fieldCentricity = true;
 
+  FollowPath.Builder m_pathBuilder;
+
   private PIDController m_xController = new PIDController(2, 0, 0);
   private PIDController m_yController = new PIDController(2, 0, 0);
-  private PIDController m_rotController = new PIDController(2, 0, 0);
+  private PIDController m_rotController = new PIDController(5, 0.05, 0.03);
 
   public Swerve(SwerveIO io) {
 
     m_io = io;
 
-    m_rotController.enableContinuousInput(-Math.PI, Math.PI);
+    m_rotController.enableContinuousInput(0.0, 2 * Math.PI);
+    m_rotController.setTolerance(Units.degreesToRadians(5.0));
 
     RobotConfig config;
     try {
       config = RobotConfig.fromGUISettings();
     } catch (Exception e) {
+      e.printStackTrace();
+      e.printStackTrace();
       e.printStackTrace();
       return;
     }
@@ -68,6 +77,18 @@ public class Swerve extends SubsystemBase {
         Alliance::isRed,
         this // Subsystem req
         );
+
+    m_pathBuilder =
+        new FollowPath.Builder(
+                this,
+                m_io::getPose,
+                m_io::getSpeeds,
+                m_io::driveRobotRelative,
+                new PIDController(2.0, 0.0, 0.0),
+                new PIDController(1.0, 0.0, 0.0),
+                new PIDController(0.2, 0.0, 0.0))
+            .withDefaultShouldFlip()
+            .withTRatioBasedTranslationHandoffs(true);
   }
 
   @Override
@@ -75,14 +96,15 @@ public class Swerve extends SubsystemBase {
 
     m_io.periodic();
 
-    RobotState.getInstance().setLastMeasuredSpeeds(getChassisSpeeds());
-    RobotState.getInstance().setPoseEst(getPose());
+    RobotState.setLastMeasuredSpeeds(getChassisSpeeds());
+    RobotState.setPoseEst(getPose());
 
+    Logger.recordOutput("Swerve/fieldCentric", m_fieldCentricity);
     Logger.recordOutput("Swerve/m-speeds", getChassisSpeeds());
     Logger.recordOutput("Swerve/m-states", m_io.getModuleStates());
     Logger.recordOutput("Swerve/m-speeds", getChassisSpeeds());
     Logger.recordOutput("Swerve/m-pose", getPose());
-    Logger.recordOutput("Swerve/m-heading", getHeading());
+    Logger.recordOutput("Swerve/m-heading", getHeading().getDegrees());
     Logger.recordOutput("Swerve/m-aimed", isAimed());
 
     Logger.recordOutput("Swerve/d-aimed", Radians.of(m_rotController.getSetpoint()).in(Degrees));
@@ -115,7 +137,7 @@ public class Swerve extends SubsystemBase {
     var desiredStates =
         m_fieldCentricity
             ? ChassisSpeeds.fromFieldRelativeSpeeds(
-                speeds, (Alliance.isRed() ? getHeading().plus(Rotation2d.k180deg) : getHeading()))
+                speeds, (Alliance.isRed() ? getHeading() : getHeading().plus(Rotation2d.k180deg)))
             : speeds;
 
     m_io.driveRobotRelative(desiredStates);
@@ -128,6 +150,11 @@ public class Swerve extends SubsystemBase {
   public Command resetSwerveModules() {
 
     return runOnce(() -> m_io.resetWheelAnglesToZero()).withName("resetSwerveModules");
+  }
+
+  public Command resetPoseCmd(Pose2d pose) {
+
+    return runOnce(() -> resetPose(pose));
   }
 
   public Command drive(Supplier<ChassisSpeeds> speedsSupplier, boolean fieldCentric) {
@@ -151,11 +178,14 @@ public class Swerve extends SubsystemBase {
         );
   }
 
-  public Command pidPathPose(Supplier<Pose2d> poseSupplier) {
+  public Command bLinePathPose(Pose2d pose) {
 
-    return run(
-        () -> {
-          var targetPose = poseSupplier.get();
+    return m_pathBuilder.build(new Path(new Path.Waypoint(pose)));
+  }
+
+  public Command pidPathPose(Pose2d targetPose) {
+
+    return run(() -> {
           var currPose = getPose();
           drive(
               new ChassisSpeeds(
@@ -164,25 +194,35 @@ public class Swerve extends SubsystemBase {
                   m_rotController.calculate(
                       currPose.getRotation().getZ(), targetPose.getRotation().getRadians())),
               true);
-        });
+        })
+        .until(
+            () ->
+                m_xController.atSetpoint()
+                    && m_yController.atSetpoint()
+                    && m_rotController.atSetpoint())
+        .andThen(runOnce(() -> drive(new ChassisSpeeds(), m_fieldCentricity)));
   }
 
   public Command aimSOTM() {
 
-    return aim(() -> RobotState.getInstance().getSOTMRotTarget()).withName("AimSOTM");
+    return aim(() -> RobotState.getSOTMRotTarget()).withName("AimSOTM");
   }
 
   public Command aim(Supplier<Rotation2d> angleSupplier) {
 
-    return aimMove(ChassisSpeeds::new, angleSupplier, false).withName("Aim");
+    return aimMove(ChassisSpeeds::new, () -> Optional.of(angleSupplier.get()), false, true)
+        .withName("Aim");
   }
 
   public Command aimMove(
       Supplier<ChassisSpeeds> speedsSupplier,
-      Supplier<Rotation2d> angleSupplier,
-      boolean moveWhenAimed) {
+      Supplier<Optional<Rotation2d>> angleSupplier,
+      boolean moveWhenAimed,
+      boolean rotFieldRelative) {
 
     return run(() -> {
+          var angle = angleSupplier.get();
+          if (angle.isPresent()) m_rotController.setSetpoint(angle.get().getRadians());
           drive(
               new ChassisSpeeds(
                   moveWhenAimed
@@ -192,8 +232,8 @@ public class Swerve extends SubsystemBase {
                       ? (isAimed() ? speedsSupplier.get().vyMetersPerSecond : 0.0)
                       : speedsSupplier.get().vyMetersPerSecond,
                   m_rotController.calculate(
-                      m_io.getGyroHeading().getRadians(), angleSupplier.get().getRadians())),
-              m_fieldCentricity);
+                      rotFieldRelative ? m_io.getGyroHeading().getRadians() : 0.0)),
+              false);
         })
         .withName("AimMove");
   }

@@ -29,9 +29,9 @@ import edu.wpi.first.units.measure.Angle;
 import edu.wpi.first.units.measure.Distance;
 import edu.wpi.first.wpilibj.simulation.DCMotorSim;
 import edu.wpi.first.wpilibj.simulation.FlywheelSim;
+import frc.lib.hardware.vision.VisionConfig;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 
 public final class Constants {
 
@@ -83,53 +83,61 @@ public final class Constants {
             FieldLengthMeters - AllianceWallToAllianceZoneMeters,
             FieldWidthMeters - (FieldWidthMeters / 4),
             new Rotation2d());
-
-    public static Map<Integer, String> GamepieceNames =
-        Map.of(
-            0, "Fuel",
-            1, "null");
   }
 
   public static final class Vision {
 
-    public static final String CameraName1 = "RealCam";
+    public static final VisionConfig BackCamConfig =
+        new VisionConfig(
+            "RealCam",
+            new Transform3d(
+                new Translation3d(
+                    Inches.of(-15.0), // forwards
+                    Inches.of(0.0), // right
+                    Inches.of(10.0)), // up
+                new Rotation3d(
+                    Degrees.of(0.0), // roll
+                    Degrees.of(10.0), // pitch
+                    Degrees.of(180.0)))); // yaw
 
-    public static final Transform3d RobotToCam1 =
-        new Transform3d(
-            new Translation3d(
-                Inches.of(-15.0), // forwards
-                Inches.of(0.0), // right
-                Inches.of(3.0)), // up
-            new Rotation3d(
-                Degrees.of(0.0), // roll
-                Degrees.of(0.0), // pitch
-                Degrees.of(180.0))); // yaw
+    public static final VisionConfig LimelightOfDoomAndDespair =
+        new VisionConfig(
+            "limelight-athreeg",
+            new Transform3d(
+                new Translation3d(
+                    Inches.of(0.0), // forwards
+                    Inches.of(-15.0), // right
+                    Inches.of(5.0)), // up
+                new Rotation3d(
+                    Degrees.of(90.0), // roll
+                    Degrees.of(0.0), // pitch
+                    Degrees.of(90.0)))); // yaw
 
-    public static final String CameraName2 = "limelight-athreeg";
+    public static final VisionConfig FrontCamConfig =
+        new VisionConfig(
+            "BadCam",
+            new Transform3d(
+                new Translation3d(
+                    Inches.of(15.0), // forwards
+                    Inches.of(-3.0), // right
+                    Inches.of(5.0)), // up
+                new Rotation3d(
+                    Degrees.of(90.0), // roll
+                    Degrees.of(-20.0), // pitch
+                    Degrees.of(0.0)))); // yaw
 
-    public static final Transform3d RobotToCam2 =
-        new Transform3d(
-            new Translation3d(
-                Inches.of(0.0), // forwards
-                Inches.of(-15.0), // right
-                Inches.of(5.0)), // up
-            new Rotation3d(
-                Degrees.of(0.0), // roll
-                Degrees.of(0.0), // pitch
-                Degrees.of(90.0))); // yaw
-
-    public static final String CameraName3 = "BadCam";
-
-    public static final Transform3d RobotToCam3 =
-        new Transform3d(
-            new Translation3d(
-                Inches.of(15.0), // forwards
-                Inches.of(-2.0), // right
-                Inches.of(3.0)), // up
-            new Rotation3d(
-                Degrees.of(0.0), // roll
-                Degrees.of(0.0), // pitch
-                Degrees.of(180.0))); // yaw
+    public static final VisionConfig WebCam =
+        new VisionConfig(
+            "LightCam",
+            new Transform3d(
+                new Translation3d(
+                    Inches.of(-1.0), // forwards
+                    Inches.of(15.0), // right
+                    Inches.of(5.0)), // up
+                new Rotation3d(
+                    Degrees.of(0.0), // roll
+                    Degrees.of(-20.0), // pitch
+                    Degrees.of(-90.0)))); // yaw
 
     public static AprilTagFieldLayout TagLayout =
         AprilTagFieldLayout.loadField(AprilTagFields.k2026RebuiltWelded);
@@ -137,15 +145,20 @@ public final class Constants {
 
   public static final class SimModels {
 
+    // The follower motors dont need to/shouldn't modify the state of other sim motor models
+    public static final DCMotorSim MockFollowerModel =
+        new DCMotorSim(
+            LinearSystemId.createDCMotorSystem(DCMotor.getKrakenX60(1), 1, 1),
+            DCMotor.getKrakenX60(1));
+
     public static final int FlywheelGearRatio = 1;
-    public static final double FlywheelMOI = 0.001279246;
+    public static final double FlywheelMOI = 0.02;
 
     public static final FlywheelSim Flywheel =
         new FlywheelSim(
             LinearSystemId.createFlywheelSystem(
                 DCMotor.getKrakenX60(2), FlywheelMOI, FlywheelGearRatio),
-            DCMotor.getKrakenX60(2),
-            0.2);
+            DCMotor.getKrakenX60(2));
 
     public static final int IndexerGearRatio = 25;
     public static final double IndexerMOI = 0.021;
@@ -158,26 +171,25 @@ public final class Constants {
             DCMotor.getKrakenX60(1));
 
     public static final int IntakeGearRatio = 25;
-    public static final double IntakeMOI = 0.210408789;
+    public static final double IntakeMOI = 0.070408789;
 
     public static final DCMotorSim Intake =
         new DCMotorSim(
             LinearSystemId.createDCMotorSystem(DCMotor.getKrakenX60(2), IntakeMOI, IntakeGearRatio),
-            DCMotor.getKrakenX60(2),
-            1.0,
-            1.0);
+            DCMotor.getKrakenX60(2));
+
+    public static final int RollerGearRatio = 1;
+    public static final double RollerMOI = 0.01102666212;
   }
 
   public static final class Chassis {
+
     // NOTE: The absolute encoder range is 0.5 to -0.5
     // These are the absolute encoder values that correspond to the wheels facing "forward"
-    public static final Angle FrontRightForwardsAngle =
-        Rotations.of(-0.1796); // Degrees.of( 0.3824 - 0.5); // WE ARE SO COOKED
-    public static final Angle FrontLeftForwardsAngle =
-        Rotations.of(-0.4775); // Degrees.of( 0.408691);
-    public static final Angle BackRightForwardsAngle =
-        Rotations.of(0.05908); // Degrees.of(-0.11377);
-    public static final Angle BackLeftForwardsAngle = Rotations.of(0.07); // Degrees.of(-0.025146);
+    public static final Angle FrontRightForwardsAngle = Rotations.of(-1.7334);
+    public static final Angle FrontLeftForwardsAngle = Rotations.of(-0.4800);
+    public static final Angle BackRightForwardsAngle = Rotations.of(0.05908);
+    public static final Angle BackLeftForwardsAngle = Rotations.of(0.08325);
 
     public static final Distance WheelBaseMeters = Inches.of(30.0);
     public static final Distance TrackWidthMeters = Inches.of(30.0);

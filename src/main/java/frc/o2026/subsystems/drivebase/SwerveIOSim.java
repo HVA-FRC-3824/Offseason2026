@@ -17,12 +17,14 @@ import edu.wpi.first.math.kinematics.SwerveModulePosition;
 import edu.wpi.first.math.kinematics.SwerveModuleState;
 import edu.wpi.first.math.system.plant.DCMotor;
 import frc.lib.rebuilt.RobotBumpSim;
+import frc.lib.sim.SelfControlledSwerveDriveSimulation;
+import frc.lib.sim.SwerveDriveSimulation;
 import frc.o2026.Constants;
+import frc.o2026.RobotState;
+import frc.o2026.subsystems.drivebase.poseVision.PoseCameraIO;
 import frc.o2026.subsystems.drivebase.poseVision.PoseVision;
 import org.ironmaple.simulation.SimulatedArena;
 import org.ironmaple.simulation.drivesims.COTS;
-import org.ironmaple.simulation.drivesims.SelfControlledSwerveDriveSimulation;
-import org.ironmaple.simulation.drivesims.SwerveDriveSimulation;
 import org.ironmaple.simulation.drivesims.configs.DriveTrainSimulationConfig;
 import org.littletonrobotics.junction.Logger;
 
@@ -45,10 +47,10 @@ public class SwerveIOSim implements SwerveIO {
           .withGyro(COTS.ofPigeon2())
           // Specify swerve module (for realistic swerve dynamics)
           .withSwerveModule(
-              COTS.ofMark4(
+              COTS.ofMark4i(
                   DCMotor.getKrakenX60(1), // Drive motor
                   DCMotor.getNEO(1), // Steer motor
-                  COTS.WHEELS.DEFAULT_NEOPRENE_TREAD.cof,
+                  COTS.WHEELS.BLUE_NITRILE_TREAD.cof,
                   2)) // L3 Gear ratio
           .withTrackLengthTrackWidth(
               Constants.Chassis.WheelBaseMeters, Constants.Chassis.TrackWidthMeters)
@@ -59,21 +61,26 @@ public class SwerveIOSim implements SwerveIO {
   private static SelfControlledSwerveDriveSimulation m_swerveDriveSimulation =
       new SelfControlledSwerveDriveSimulation(
           new SwerveDriveSimulation(
-              driveTrainSimulationConfig, new Pose2d(2, 2, new Rotation2d())));
+              driveTrainSimulationConfig, new Pose2d(2, 2, new Rotation2d(Math.PI))));
 
   private RobotBumpSim m_robotBumpSim = new RobotBumpSim(Constants.Chassis.ModulePositions);
 
-  private PoseVision m_vision =
-      new PoseVision(
-          (data) ->
-              m_swerveDriveSimulation.addVisionEstimation(
-                  data.visionMeasurement().toPose2d(),
-                  data.timestampSeconds(),
-                  data.get2dStdDevs()));
+  private PoseVision m_vision;
 
   private boolean m_xMode = false;
 
-  public SwerveIOSim() {
+  public SwerveIOSim(PoseCameraIO... cameras) {
+
+    m_vision =
+        new PoseVision(
+            (data) ->
+                m_swerveDriveSimulation.addVisionEstimation(
+                    data.visionMeasurement().toPose2d(),
+                    data.timestampSeconds(),
+                    data.get2dStdDevs()),
+            cameras);
+
+    m_vision.addGyroResetter(newRot -> m_swerveDriveSimulation.resetGyro(newRot.toRotation2d()));
 
     SimulatedArena.getInstance()
         .addDriveTrainSimulation(m_swerveDriveSimulation.getDriveTrainSimulation());
@@ -103,17 +110,10 @@ public class SwerveIOSim implements SwerveIO {
       return;
     }
 
-    // Save the desired states for use and logging later
-    SwerveModuleState[] desiredStates = Constants.Chassis.Kinematics.toSwerveModuleStates(speeds);
-
     // Set the desired state for each swerve module
-    // setModuleStates(desiredStates);
     m_swerveDriveSimulation.runChassisSpeeds(speeds, new Translation2d(), false, true);
 
-    Logger.recordOutput("XMode", m_xMode);
-    Logger.recordOutput("d-speeds", speeds);
-    Logger.recordOutput("d-states", desiredStates);
-    Logger.recordOutput("sim-pose", m_swerveDriveSimulation.getActualPoseInSimulationWorld());
+    Logger.recordOutput("Swerve/XMode", m_xMode);
   }
 
   @Override
@@ -140,11 +140,13 @@ public class SwerveIOSim implements SwerveIO {
         m_swerveDriveSimulation.getMeasuredSpeedsFieldRelative(false);
 
     Pose3d simPose3d = m_robotBumpSim.update(simPose, fieldRelativeSpeeds, 20);
-    if (m_robotBumpSim.isOnRamp()) {
+    if (m_robotBumpSim.isOnRamp())
       m_swerveDriveSimulation.setSimulationWorldPose(
           m_robotBumpSim.getSimWorldPose(simPose3d.toPose2d()));
-    }
-    Logger.recordOutput("Drive/Pose3d", simPose3d);
+
+    RobotState.setSimRealPose(simPose3d);
+
+    Logger.recordOutput("Sim/Pose3d", simPose3d);
   }
 
   @Override

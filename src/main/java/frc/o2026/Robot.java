@@ -11,7 +11,7 @@ import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
 import frc.lib.hardware.SimBattery;
-import frc.lib.hardware.ctre.OrchestraOrchestrator;
+import frc.lib.hardware.motor.ctre.OrchestraOrchestrator;
 import frc.lib.rebuilt.BallSim;
 import org.ironmaple.simulation.SimulatedArena;
 import org.littletonrobotics.junction.LoggedRobot;
@@ -36,8 +36,7 @@ public class Robot extends LoggedRobot {
   @Override
   public void robotInit() {
 
-    CommandScheduler.getInstance()
-        .schedule(PathfindingCommand.warmupCommand(), m_robotContainer.getInit());
+    CommandScheduler.getInstance().schedule(PathfindingCommand.warmupCommand());
 
     SmartDashboard.putData(CommandScheduler.getInstance());
   }
@@ -45,10 +44,9 @@ public class Robot extends LoggedRobot {
   @Override
   public void robotPeriodic() {
 
-    SimBattery.calculateSupplyVoltage();
-    Logger.recordOutput("SimVoltage", SimBattery.getSupplyVoltage());
-
     CommandScheduler.getInstance().run();
+
+    SimBattery.calculateSupplyVoltage();
   }
 
   @Override
@@ -75,5 +73,7 @@ public class Robot extends LoggedRobot {
     if (m_autonomousCommand != null) {
       m_autonomousCommand.cancel();
     }
+
+    OrchestraOrchestrator.sendChooser();
   }
 }

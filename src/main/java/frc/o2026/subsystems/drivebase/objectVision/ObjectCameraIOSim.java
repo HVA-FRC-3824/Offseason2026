@@ -7,61 +7,55 @@
 package frc.o2026.subsystems.drivebase.objectVision;
 
 import edu.wpi.first.math.Pair;
-import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Pose3d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Rotation3d;
-import edu.wpi.first.math.geometry.Transform3d;
 import edu.wpi.first.math.geometry.Translation3d;
-import frc.o2026.Constants;
+import frc.lib.hardware.vision.VisionConfig;
+import frc.o2026.RobotState;
 import frc.o2026.subsystems.drivebase.objectVision.ObjectVision.ObjectTargetData;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
-import java.util.function.Supplier;
 import org.ironmaple.simulation.SimulatedArena;
+import org.ironmaple.simulation.gamepieces.GamePieceOnFieldSimulation;
 
 public class ObjectCameraIOSim implements ObjectCameraIO {
 
   private static final Rotation2d CAMERA_HORIZONTAL_FOV = Rotation2d.fromDegrees(75),
       CAMERA_VERTICAL_FOV = Rotation2d.fromDegrees(45);
 
-  private Transform3d m_offset;
+  private VisionConfig m_config;
 
-  private Supplier<Pose2d> m_poseSupplier;
+  public ObjectCameraIOSim(VisionConfig config) {
 
-  public ObjectCameraIOSim(Transform3d offset, Supplier<Pose2d> poseSupplier) {
-
-    m_offset = offset;
-    m_poseSupplier = poseSupplier;
+    m_config = config;
   }
 
   @Override
-  public Set<ObjectTargetData> getObjects() {
+  public Optional<Set<ObjectTargetData>> getObjects() {
 
     Set<ObjectTargetData> objects = Set.of();
 
-    Constants.Field.GamepieceNames.forEach(
-        (id, key) -> {
-          objects.addAll(
-              calculateVisibleGamePieces(new Pose3d(m_poseSupplier.get()).plus(m_offset), id)
-                  .stream()
-                  .map(
-                      data ->
-                          new ObjectTargetData(
-                              id,
-                              1,
-                              data.minus(new Translation3d(m_poseSupplier.get().getTranslation()))))
-                  .toList());
-        });
+    objects.addAll(
+        calculateVisibleGamePieces(RobotState.getPoseEst().transformBy(m_config.offset())).stream()
+            .map(
+                data ->
+                    new ObjectTargetData(
+                        0, 1, data.minus(RobotState.getPoseEst().getTranslation())))
+            .toList());
 
-    return objects;
+    if (objects.isEmpty()) return Optional.empty();
+    return Optional.of(objects);
   }
 
-  private List<Translation3d> calculateVisibleGamePieces(Pose3d cameraPose, int objectId) {
+  private List<Translation3d> calculateVisibleGamePieces(Pose3d cameraPose) {
 
     List<Pose3d> gamePiecesOnField =
-        SimulatedArena.getInstance()
-            .getGamePiecesPosesByType(Constants.Field.GamepieceNames.get(objectId));
+        SimulatedArena.getInstance().gamePiecesOnField().stream()
+            // .filter(piece -> piece.getType() == "Fuel")
+            .map(GamePieceOnFieldSimulation::getPose3d)
+            .toList();
 
     var pieces =
         gamePiecesOnField.stream()

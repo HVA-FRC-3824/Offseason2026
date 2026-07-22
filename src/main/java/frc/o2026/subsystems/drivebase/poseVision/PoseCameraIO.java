@@ -10,6 +10,7 @@ import edu.wpi.first.math.Matrix;
 import edu.wpi.first.math.VecBuilder;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Pose3d;
+import edu.wpi.first.math.geometry.Rotation3d;
 import edu.wpi.first.math.geometry.Transform3d;
 import edu.wpi.first.math.numbers.N1;
 import edu.wpi.first.math.numbers.N4;
@@ -17,6 +18,8 @@ import frc.o2026.Configs;
 import frc.o2026.Constants;
 import frc.o2026.subsystems.drivebase.poseVision.PoseVision.VisionData;
 import java.util.ArrayList;
+import java.util.List;
+import java.util.function.Consumer;
 import org.photonvision.simulation.PhotonCameraSim;
 
 public interface PoseCameraIO {
@@ -28,6 +31,12 @@ public interface PoseCameraIO {
   }
 
   public Transform3d getOffset();
+
+  public List<Pose2d> getLastSeenTags();
+
+  public default void addGyroResetter(Consumer<Rotation3d> gyroResetter) {}
+
+  public default void periodic() {}
 
   public static Pose3d getTagPose(int fiduciary) {
 

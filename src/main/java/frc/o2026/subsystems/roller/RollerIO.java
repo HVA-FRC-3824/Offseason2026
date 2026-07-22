@@ -12,9 +12,11 @@ public interface RollerIO {
 
   public default void periodic() {}
 
-  public void setRoller(AngularVelocity velocity);
+  public void setVelocity(AngularVelocity velocity);
 
-  public void brakeRoller();
+  public void brake();
 
   public AngularVelocity getVelocity();
+
+  public double getLastReference();
 }

@@ -25,7 +25,8 @@ import edu.wpi.first.units.measure.AngularAcceleration;
 import edu.wpi.first.units.measure.AngularVelocity;
 import edu.wpi.first.units.measure.LinearAcceleration;
 import edu.wpi.first.units.measure.LinearVelocity;
-import frc.lib.hardware.MotorConfig;
+import edu.wpi.first.wpilibj.RobotBase;
+import frc.lib.hardware.motor.MotorConfig;
 
 public class Configs {
 
@@ -44,7 +45,6 @@ public class Configs {
 
     public static final MotorConfig PivotConfig =
         new MotorConfig()
-            .withStatorCurrent(Amps.of(60.0))
             .withInverted(true)
             .withBrakeMode(true)
             .withContinuousWrap(false)
@@ -76,37 +76,35 @@ public class Configs {
 
     public static final MotorConfig BeltConfig =
         new MotorConfig()
-            .withStatorCurrent(Amps.of(85.0))
             .withInverted(true)
             .withBrakeMode(false)
             .withContinuousWrap(false)
-            .withP(0.3)
-            .withAccelerationLimit(RotationsPerSecondPerSecond.of(120))
-            .withVelocityLimit(RotationsPerSecond.of(30));
+            .withP(0.3);
 
     public static final MotorConfig KickerConfig =
         new MotorConfig()
-            .withStatorCurrent(Amps.of(85.0))
             .withInverted(false)
             .withBrakeMode(false)
             .withContinuousWrap(false)
-            .withP(0.3)
-            .withAccelerationLimit(RotationsPerSecondPerSecond.of(120))
-            .withVelocityLimit(RotationsPerSecond.of(120));
+            .withP(0.3);
   }
 
   public static final class Flywheel {
 
     public static final MotorConfig Config =
-        new MotorConfig()
-            .withSupplyCurrent(Amps.of(40.0))
-            .withStatorCurrent(Amps.of(85.0))
-            .withInverted(false)
-            .withBrakeMode(false)
-            .withContinuousWrap(false)
-            .withP(0.55)
-            .withV(0.13)
-            .withA(0.99);
+        RobotBase.isReal()
+            ? new MotorConfig()
+                .withInverted(false)
+                .withBrakeMode(false)
+                .withContinuousWrap(false)
+                .withP(0.55)
+                .withV(0.13)
+                .withA(0.99)
+            : new MotorConfig()
+                .withInverted(false)
+                .withBrakeMode(false)
+                .withContinuousWrap(false)
+                .withP(10.0);
 
     public static final AngularVelocity CloseSpeed = RotationsPerSecond.of(45.0); // 90 in
     public static final AngularVelocity MiddleSpeed = RotationsPerSecond.of(51.0); // 120 in
@@ -123,38 +121,50 @@ public class Configs {
         new MotorConfig()
             .withSupplyCurrent(Amps.of(40.0))
             .withStatorCurrent(Amps.of(80.0))
-            .withBrakeMode(true)
+            .withBrakeMode(false)
             .withInverted(false)
             .withContinuousWrap(false)
-            .withP(0.1)
+            .withP(0.07)
+            .withV(0.0)
             .withVelocityLimit(RotationsPerSecond.of(10))
             .withAccelerationLimit(RotationsPerSecondPerSecond.of(10));
 
     public static final MotorConfig TurnConfig =
         new MotorConfig()
-            .withSupplyCurrent(Amps.of(40.0))
-            .withStatorCurrent(Amps.of(20.0))
+            .withSupplyCurrent(Amps.of(20.0))
+            .withStatorCurrent(Amps.of(40.0))
             .withInverted(true)
             .withBrakeMode(true)
             .withContinuousWrap(true)
-            .withP(3.5)
-            .withD(0.05)
+            .withP(1.0)
+            .withD(0.0)
             .withSensorToMechanismRatio(21.5)
-            .withVelocityLimit(RotationsPerSecond.of(100))
+            .withVelocityLimit(RotationsPerSecond.of(150))
             .withAccelerationLimit(RotationsPerSecondPerSecond.of(200));
 
-    public static final LinearVelocity MaximumLinear = FeetPerSecond.of(12.0);
+    public static LinearVelocity MaximumLinear = FeetPerSecond.of(12.0);
 
-    public static final LinearAcceleration MaximumLinearAcceleration =
-        FeetPerSecondPerSecond.of(12.0);
+    public static LinearAcceleration MaximumLinearAcceleration = FeetPerSecondPerSecond.of(12.0);
 
-    public static final AngularVelocity MaximumAngularVelocity = RadiansPerSecond.of(4 * Math.PI);
+    public static AngularVelocity MaximumAngularVelocity = RadiansPerSecond.of(4 * Math.PI);
 
-    public static final AngularAcceleration MaximumAngularAcceleration =
+    public static AngularAcceleration MaximumAngularAcceleration =
         RadiansPerSecondPerSecond.of(4 * Math.PI);
 
+    static {
+      boolean SLOWWWWW_DOWNNNNNNN = true;
+
+      if (SLOWWWWW_DOWNNNNNNN) {
+
+        MaximumLinear = MaximumLinear.div(2.0);
+        MaximumLinearAcceleration = MaximumLinearAcceleration.div(2.0);
+        MaximumAngularVelocity = MaximumAngularVelocity.div(2.0);
+        MaximumAngularAcceleration = MaximumAngularAcceleration.div(2.0);
+      }
+    }
+
     public static final double TranslateExponentialPower = 3.0;
-    public static final double AngularExponentialPower = 4.0;
+    public static final double AngularExponentialPower = 2.0;
 
     public static final PathConstraints constraints =
         new PathConstraints(

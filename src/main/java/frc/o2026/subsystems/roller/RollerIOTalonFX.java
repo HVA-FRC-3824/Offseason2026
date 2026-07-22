@@ -6,32 +6,19 @@
 
 package frc.o2026.subsystems.roller;
 
-import edu.wpi.first.units.measure.AngularVelocity;
-import frc.lib.hardware.MotorIO;
-import frc.lib.hardware.ctre.TalonIO;
+import frc.lib.hardware.motor.ctre.TalonIO;
 import frc.o2026.Configs;
 import frc.o2026.Constants;
 
-public class RollerIOTalonFX implements RollerIO {
-  public MotorIO m_motor;
+public class RollerIOTalonFX extends TalonIO implements RollerIO {
 
   public RollerIOTalonFX() {
 
-    m_motor = new TalonIO(Constants.CanIds.FuelIntakeMotorId, Configs.Roller.RollerConfig);
+    super(Constants.CanIds.FuelIntakeMotorId, Configs.Roller.RollerConfig);
   }
 
   @Override
-  public void setRoller(AngularVelocity velocity) {
-    m_motor.setVelocity(velocity);
-  }
-
-  @Override
-  public void brakeRoller() {
-    m_motor.brake();
-  }
-
-  @Override
-  public AngularVelocity getVelocity() {
-    return m_motor.getVelocity();
+  public void periodic() {
+    super.periodic();
   }
 }

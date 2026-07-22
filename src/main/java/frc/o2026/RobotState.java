@@ -25,20 +25,21 @@ public class RobotState {
     return m_instance;
   }
 
-  public void decrementFuel() {
+  public static void decrementFuel() {
     simFuelCount--;
   }
 
-  public void incrementFuel() {
+  public static void incrementFuel() {
     simFuelCount++;
   }
 
-  @Getter private int simFuelCount = 8; // preloads
+  @Getter private static int simFuelCount = 8; // preloads
 
-  @Setter @Getter private Rotation2d SOTMRotTarget = new Rotation2d();
-  @Setter @Getter private Pose3d poseEst = new Pose3d();
-  @Setter @Getter private AngularVelocity angularVelocity = DegreesPerSecond.of(0.0);
-  @Setter @Getter private ChassisSpeeds lastMeasuredSpeeds = new ChassisSpeeds();
-  @Setter @Getter private boolean isSimIntaking = false;
-  @Setter @Getter private boolean isSimIndexing = false;
+  @Setter @Getter private static Rotation2d SOTMRotTarget = new Rotation2d();
+  @Setter @Getter private static Pose3d poseEst = new Pose3d();
+  @Setter @Getter private static Pose3d simRealPose = new Pose3d();
+  @Setter @Getter private static AngularVelocity angularVelocity = DegreesPerSecond.of(0.0);
+  @Setter @Getter private static ChassisSpeeds lastMeasuredSpeeds = new ChassisSpeeds();
+  @Setter @Getter private static boolean isSimIntaking = false;
+  @Setter @Getter private static boolean isSimIndexing = false;
 }

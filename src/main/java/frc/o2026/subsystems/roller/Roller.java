@@ -6,9 +6,12 @@
 
 package frc.o2026.subsystems.roller;
 
+import static edu.wpi.first.units.Units.RotationsPerSecond;
+
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.o2026.Configs;
+import org.littletonrobotics.junction.Logger;
 
 public class Roller extends SubsystemBase {
 
@@ -22,17 +25,20 @@ public class Roller extends SubsystemBase {
   @Override
   public void periodic() {
     m_io.periodic();
+
+    Logger.recordOutput("roller/m-velocity", m_io.getVelocity().in(RotationsPerSecond));
+    Logger.recordOutput("roller/d-velocity", m_io.getLastReference());
   }
 
   public Command off() {
-    return runOnce(m_io::brakeRoller);
+    return runOnce(m_io::brake);
   }
 
   public Command on() {
-    return runOnce(() -> m_io.setRoller(Configs.Roller.IntakeDriveTurnsPerSec));
+    return runOnce(() -> m_io.setVelocity(Configs.Roller.IntakeDriveTurnsPerSec));
   }
 
   public Command backwards() {
-    return runOnce(() -> m_io.setRoller(Configs.Roller.IntakeDriveTurnsPerSec.times(-1.0)));
+    return runOnce(() -> m_io.setVelocity(Configs.Roller.IntakeDriveTurnsPerSec.times(-1.0)));
   }
 }

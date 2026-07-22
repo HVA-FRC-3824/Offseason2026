@@ -16,11 +16,12 @@ import edu.wpi.first.math.geometry.Rotation3d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.kinematics.SwerveModulePosition;
 import edu.wpi.first.math.kinematics.SwerveModuleState;
+import frc.lib.hardware.gyro.GyroIO;
+import frc.lib.hardware.gyro.GyroIONavX;
 import frc.o2026.Constants;
 import frc.o2026.subsystems.drivebase.poseVision.PoseCameraIO;
-import frc.o2026.subsystems.drivebase.poseVision.PoseCameraIOPhoton;
 import frc.o2026.subsystems.drivebase.poseVision.PoseVision;
-import frc.o2026.subsystems.gyro.GyroIO;
+import org.littletonrobotics.junction.Logger;
 
 /// @brief Chassis subsystem for swerve drive control
 ///
@@ -85,6 +86,8 @@ public class SwerveIOReal implements SwerveIO {
   private GyroIO m_gyroIO;
   private PoseVision m_vision;
 
+  private GyroIO m_GyroIO2 = new GyroIONavX();
+
   public SwerveIOReal(GyroIO gyroIO, PoseCameraIO... cameras) {
 
     m_gyroIO = gyroIO;
@@ -94,16 +97,16 @@ public class SwerveIOReal implements SwerveIO {
             (data) ->
                 m_estimator.addVisionMeasurement(
                     data.visionMeasurement(), data.timestampSeconds(), data.stdDevs()),
-            new PoseCameraIOPhoton(Constants.Vision.CameraName1, Constants.Vision.RobotToCam1));
+            cameras);
 
-    resetWheelAnglesToZero();
+    m_vision.addGyroResetter(m_gyroIO::reset);
 
     m_estimator =
         new SwerveDrivePoseEstimator3d(
             Constants.Chassis.Kinematics,
             m_gyroIO.getGyroRotation(), // Initial gyro angle
             getModulePositions(),
-            new Pose3d(14.0, 7.0, 0.0, new Rotation3d()) // Initial pose
+            new Pose3d(14.0, 7.0, 0.0, new Rotation3d(Rotation2d.k180deg)) // Initial pose
             );
   }
 
@@ -113,6 +116,9 @@ public class SwerveIOReal implements SwerveIO {
     m_vision.update();
 
     m_estimator.update(m_gyroIO.getGyroRotation(), getModulePositions());
+
+    Logger.recordOutput("Navx-Output ", m_GyroIO2.getGyroRotation().getMeasureZ().in(Degrees));
+    Logger.recordOutput("Pidgeon-Output ", m_gyroIO.getGyroRotation().getMeasureZ().in(Degrees));
   }
 
   public void driveRobotRelative(ChassisSpeeds speeds) {
@@ -142,10 +148,10 @@ public class SwerveIOReal implements SwerveIO {
 
   public void resetWheelAnglesToZero() {
     // Set the swerve wheel angles to zero
-    m_flSwerveModules.setWheelAngleToForward(Constants.Chassis.FrontLeftForwardsAngle.in(Degrees));
-    m_frSwerveModules.setWheelAngleToForward(Constants.Chassis.FrontRightForwardsAngle.in(Degrees));
-    m_blSwerveModules.setWheelAngleToForward(Constants.Chassis.BackLeftForwardsAngle.in(Degrees));
-    m_brSwerveModules.setWheelAngleToForward(Constants.Chassis.BackRightForwardsAngle.in(Degrees));
+    m_flSwerveModules.setWheelAngleToForward(Constants.Chassis.FrontLeftForwardsAngle);
+    m_frSwerveModules.setWheelAngleToForward(Constants.Chassis.FrontRightForwardsAngle);
+    m_blSwerveModules.setWheelAngleToForward(Constants.Chassis.BackLeftForwardsAngle);
+    m_brSwerveModules.setWheelAngleToForward(Constants.Chassis.BackRightForwardsAngle);
   }
 
   public SwerveModuleState[] getModuleStates() {
@@ -190,6 +196,10 @@ public class SwerveIOReal implements SwerveIO {
   public void resetGyro() {
 
     m_gyroIO.reset();
+    m_GyroIO2.reset();
+
+    m_estimator.resetPose(
+        new Pose3d(m_estimator.getEstimatedPosition().getTranslation(), new Rotation3d()));
   }
 
   @Override

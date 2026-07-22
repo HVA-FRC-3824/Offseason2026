@@ -6,10 +6,18 @@
 
 package frc.o2026.subsystems.drivebase.objectVision;
 
+import edu.wpi.first.units.measure.Angle;
 import frc.o2026.subsystems.drivebase.objectVision.ObjectVision.ObjectTargetData;
+import java.util.Optional;
 import java.util.Set;
 
 public interface ObjectCameraIO {
 
-  public Set<ObjectTargetData> getObjects();
+  public default Optional<Angle> getRotToBestObject() {
+    return Optional.empty();
+  }
+
+  public default Optional<Set<ObjectTargetData>> getObjects() {
+    return Optional.empty();
+  }
 }
