@@ -10,6 +10,7 @@ import static edu.wpi.first.units.Units.RPM;
 
 import com.pathplanner.lib.auto.AutoBuilder;
 import com.pathplanner.lib.auto.NamedCommands;
+import com.pathplanner.lib.events.EventTrigger;
 import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.filter.SlewRateLimiter;
 import edu.wpi.first.math.geometry.Pose2d;
@@ -45,6 +46,7 @@ import frc.o2026.subsystems.drivebase.poseVision.PoseCameraIOSim;
 import frc.o2026.subsystems.roller.Roller;
 import frc.o2026.subsystems.roller.RollerIOSim;
 import frc.o2026.subsystems.roller.RollerIOTalonFX;
+import java.util.Map;
 import java.util.function.Supplier;
 
 public class RobotContainer extends SubsystemBase {
@@ -157,14 +159,25 @@ public class RobotContainer extends SubsystemBase {
   private final Supplier<Command> shootCmd =
       () ->
           Commands.parallel(
-              m_flywheel.auto(),
-              m_swerve.aimSOTM(),
-              m_indexer.on().onlyWhile(this::readyToShoot),
-              m_intake.stowed());
+              m_flywheel.auto(), m_indexer.on().onlyWhile(this::readyToShoot), m_intake.stowed());
 
   public RobotContainer() {
 
     m_autoChooser = AutoBuilder.buildAutoChooser();
+    m_autoChooser.addOption(
+        "Custom",
+        Commands.sequence(
+            m_swerve.runOnce(() -> m_swerve.resetPose(new Pose2d(4.4, 7.4, Rotation2d.kCCW_90deg))),
+            m_swerve.bLinePathPose(new Pose2d(7.7, 7.5, Rotation2d.kCCW_90deg)),
+            m_roller.on(),
+            m_intake.deploy(),
+            m_swerve.bLinePathPose(new Pose2d(7.7, 0.6, Rotation2d.kCCW_90deg)),
+            m_roller.off(),
+            m_intake.stowed(),
+            m_swerve.bLinePathPose(new Pose2d(3.0, 0.6, Rotation2d.kCCW_90deg)),
+            m_swerve
+                .pidPathPose(() -> new Pose2d(2.3, 2.8, RobotState.getSOTMRotTarget()), Map.of())
+                .alongWith(shootCmd.get())));
     SmartDashboard.putData("Auto Chooser", m_autoChooser);
 
     var targetPose = new Pose2d(9, 7.5, Rotation2d.kZero);
@@ -172,7 +185,7 @@ public class RobotContainer extends SubsystemBase {
 
     SmartDashboard.putData("bLine to 5,5", m_swerve.bLinePathPose(targetPose));
     SmartDashboard.putData("pp to 5,5", m_swerve.ppPathPose(targetPose));
-    SmartDashboard.putData("pid to 5,5", m_swerve.pidPathPose(targetPose));
+    SmartDashboard.putData("pid to 5,5", m_swerve.pidPathPose(targetPose, Map.of()));
     SmartDashboard.putData("reset", m_swerve.resetPoseCmd(startPose));
 
     m_swerve.setDefaultCommand(m_swerve.drive(this::getSpeeds));
@@ -193,12 +206,20 @@ public class RobotContainer extends SubsystemBase {
                 true,
                 false));
 
-    m_driver.rightTrigger().whileTrue(shootCmd.get());
+    m_driver.rightTrigger().whileTrue(shootCmd.get().alongWith(m_swerve.aimSOTM(this::getSpeeds)));
     m_driver
         .rightTrigger()
         .onFalse(Commands.parallel(m_flywheel.off(), m_intake.stowed(), m_indexer.off()));
 
-    m_driver.rightBumper().whileTrue(m_flywheel.manual(RPM.of(6000.0)));
+    m_driver
+        .rightBumper()
+        .whileTrue(
+            m_flywheel
+                .manual(RPM.of(6000.0))
+                .withTimeout(5)
+                .andThen(m_flywheel.manual(RPM.of(4000.0)))
+                .withTimeout(5)
+                .andThen(m_flywheel.manual(RPM.of(2000.0))));
     m_driver.rightBumper().onFalse(m_flywheel.off());
 
     m_driver.leftTrigger().whileTrue(Commands.parallel(m_intake.deploy(), m_roller.on()));
@@ -207,7 +228,13 @@ public class RobotContainer extends SubsystemBase {
     m_driver.povUp().onTrue(m_intake.stowed());
     m_driver.povDown().onTrue(m_intake.deploy());
 
-    NamedCommands.registerCommand("ShootRoutine", shootCmd.get().repeatedly());
+    NamedCommands.registerCommand(
+        "ShootAll", shootCmd.get().alongWith(m_swerve.aimShoot()).repeatedly());
+
+    new EventTrigger("ShootAll")
+        .whileTrue(shootCmd.get().alongWith(m_swerve.aimShoot()).repeatedly());
+    new EventTrigger("DeployIntake").onTrue(m_intake.deploy().andThen(m_roller.on()));
+    new EventTrigger("StowIntake").onTrue(m_intake.stowed());
   }
 
   private boolean readyToShoot() {

@@ -75,6 +75,12 @@ dependencies {
 
     testImplementation 'org.junit.jupiter:junit-jupiter:5.10.1'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+    
+    implementation 'com.github.edanliahovetsky:BLine-Lib:v0.9.1'
+}
+
+repositories {
+    maven { url 'https://jitpack.io' }
 }
 
 test {

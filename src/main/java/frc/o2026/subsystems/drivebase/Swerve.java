@@ -7,6 +7,7 @@
 package frc.o2026.subsystems.drivebase;
 
 import static edu.wpi.first.units.Units.Degrees;
+import static edu.wpi.first.units.Units.Meters;
 import static edu.wpi.first.units.Units.Radians;
 
 import com.pathplanner.lib.auto.AutoBuilder;
@@ -19,7 +20,9 @@ import edu.wpi.first.math.geometry.Pose3d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.util.Units;
+import edu.wpi.first.units.measure.Distance;
 import edu.wpi.first.wpilibj2.command.Command;
+import edu.wpi.first.wpilibj2.command.CommandScheduler;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.lib.Alliance;
 import frc.o2026.Configs;
@@ -27,6 +30,7 @@ import frc.o2026.Constants;
 import frc.o2026.RobotState;
 import frc.robot.lib.BLine.FollowPath;
 import frc.robot.lib.BLine.Path;
+import java.util.Map;
 import java.util.Optional;
 import java.util.function.Supplier;
 import org.littletonrobotics.junction.Logger;
@@ -180,20 +184,66 @@ public class Swerve extends SubsystemBase {
 
   public Command bLinePathPose(Pose2d pose) {
 
-    return m_pathBuilder.build(new Path(new Path.Waypoint(pose)));
+    return bLinePathPose(pose, Map.of());
   }
 
-  public Command pidPathPose(Pose2d targetPose) {
+  public Command bLinePathPose(Pose2d pose, Map<Distance, Command> triggers) {
+
+    var path = m_pathBuilder.build(new Path(new Path.Waypoint(pose)));
+
+    return new Command() {
+
+      public void initialize() {
+        path.initialize();
+      }
+
+      public void execute() {
+        path.execute();
+
+        triggers.forEach(
+            (dist, cmd) -> {
+              if (Math.abs(
+                      pose.getTranslation().getDistance(getPose().toPose2d().getTranslation())
+                          - dist.in(Meters))
+                  < 0.1) CommandScheduler.getInstance().schedule(cmd);
+            });
+      }
+
+      public void end(boolean interrupted) {
+        path.end(interrupted);
+      }
+
+      public boolean isFinished() {
+        return path.isFinished();
+      }
+    };
+  }
+
+  public Command pidPathPose(Pose2d targetPose, Map<Distance, Command> triggers) {
+
+    return pidPathPose(() -> targetPose, triggers);
+  }
+
+  public Command pidPathPose(Supplier<Pose2d> target, Map<Distance, Command> triggers) {
 
     return run(() -> {
-          var currPose = getPose();
+          var currPose = getPose().toPose2d();
+          var targetPose = target.get();
           drive(
               new ChassisSpeeds(
                   m_xController.calculate(currPose.getX(), targetPose.getX()),
                   m_yController.calculate(currPose.getY(), targetPose.getY()),
                   m_rotController.calculate(
-                      currPose.getRotation().getZ(), targetPose.getRotation().getRadians())),
+                      currPose.getRotation().getRadians(), targetPose.getRotation().getRadians())),
               true);
+
+          triggers.forEach(
+              (dist, cmd) -> {
+                if (Math.abs(
+                        targetPose.getTranslation().getDistance(currPose.getTranslation())
+                            - dist.in(Meters))
+                    < 0.1) CommandScheduler.getInstance().schedule(cmd);
+              });
         })
         .until(
             () ->
@@ -203,9 +253,19 @@ public class Swerve extends SubsystemBase {
         .andThen(runOnce(() -> drive(new ChassisSpeeds(), m_fieldCentricity)));
   }
 
-  public Command aimSOTM() {
+  public Command aimShoot() {
 
     return aim(() -> RobotState.getSOTMRotTarget()).withName("AimSOTM");
+  }
+
+  public Command aimSOTM(Supplier<ChassisSpeeds> speeds) {
+
+    return aimMove(
+            () -> speeds.get().div(2),
+            () -> Optional.of(RobotState.getSOTMRotTarget()),
+            false,
+            true)
+        .withName("AimSOTM");
   }
 
   public Command aim(Supplier<Rotation2d> angleSupplier) {

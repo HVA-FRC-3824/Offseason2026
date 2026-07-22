@@ -39,6 +39,13 @@ public class Configs {
 
     public static final Matrix<N4, N1> kMultiTagStdDevs =
         VecBuilder.fill(0.5, 0.5, 0.5, Double.MAX_VALUE);
+
+    // Multiplied by the measured speed in meters and filters
+    // estimates against the distance between the current pose
+    // and the estimated pose
+    public static final double ScalarPositionTolerance = 1.5;
+    // Same thing but with rotation
+    public static final double ScalarRotationTolerance = 1.5;
   }
 
   public static final class Intake {

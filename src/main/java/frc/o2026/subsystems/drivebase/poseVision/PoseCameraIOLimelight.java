@@ -12,7 +12,6 @@ import static edu.wpi.first.units.Units.DegreesPerSecond;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Pose3d;
 import edu.wpi.first.math.geometry.Transform3d;
-import frc.lib.Alliance;
 import frc.lib.hardware.vision.VisionConfig;
 import frc.lib.hardware.vision.limelight.LimelightHelpers;
 import frc.lib.hardware.vision.limelight.LimelightHelpers.PoseEstimate;
@@ -20,7 +19,6 @@ import frc.o2026.RobotState;
 import frc.o2026.subsystems.drivebase.poseVision.PoseVision.VisionData;
 import java.util.ArrayList;
 import java.util.List;
-import org.littletonrobotics.junction.Logger;
 
 public class PoseCameraIOLimelight implements PoseCameraIO {
 
@@ -52,25 +50,20 @@ public class PoseCameraIOLimelight implements PoseCameraIO {
         m_config.name(),
         rot.getMeasureZ().in(Degrees),
         RobotState.getAngularVelocity().in(DegreesPerSecond),
-        rot.getMeasureY().in(Degrees),
+        rot.getMeasureY().in(Degrees), // pitch
         0,
-        rot.getMeasureX().in(Degrees),
+        rot.getMeasureX().in(Degrees), // roll
         0);
 
-    PoseEstimate mt2 =
-        Alliance.isRed()
-            ? LimelightHelpers.getBotPoseEstimate_wpiRed_MegaTag2(m_config.name())
-            : LimelightHelpers.getBotPoseEstimate_wpiBlue_MegaTag2(m_config.name());
+    PoseEstimate mt2 = LimelightHelpers.getBotPoseEstimate_wpiBlue_MegaTag2(m_config.name());
 
+    // Filter out frivolous readings
     if (mt2 == null) return new ArrayList<>();
     if (mt2.pose.getX() < 1e-4
         && mt2.pose.getRotation().getRadians() < 1e-4
         && mt2.pose.getY() < 1e-4) return new ArrayList<>();
 
-    Logger.recordOutput("m-llEst", mt2.pose);
-
-    List<Integer> tags =
-        List.of(mt2.rawFiducials).stream().mapToInt((tag) -> tag.id).boxed().toList();
+    var tags = List.of(mt2.rawFiducials).stream().mapToInt((tag) -> tag.id).boxed().toList();
 
     m_lastSeenTags = tags.stream().map(PoseCameraIO::getTagPose).map(Pose3d::toPose2d).toList();
 

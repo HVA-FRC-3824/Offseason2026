@@ -102,25 +102,18 @@ public class Flywheel extends SubsystemBase {
     m_teacherIO.periodic();
     m_studentIO.periodic();
 
-    var hubCenter =
-        Alliance.isRed()
-            ? Constants.Field.RedHub.getTranslation().toTranslation2d()
-            : Constants.Field.BlueHub.getTranslation().toTranslation2d();
-
-    var hubForward = Alliance.isRed() ? new Translation2d(-1, 0) : new Translation2d(1, 0);
-
-    var pose = RobotState.getPoseEst();
-    ShotCalculator.ShotInputs inputs =
-        new ShotCalculator.ShotInputs(
-            pose.toPose2d(),
-            ChassisSpeeds.fromRobotRelativeSpeeds(
-                RobotState.getLastMeasuredSpeeds(), pose.toPose2d().getRotation()),
-            RobotState.getLastMeasuredSpeeds(),
-            hubCenter,
-            hubForward,
-            0.9, // vision confidence, 0 to 1
-            pose.getRotation().getMeasureY().in(Degrees),
-            pose.getRotation().getMeasureX().in(Degrees));
+    var pose = RobotState.getPoseEst().toPose2d();
+    var rot = RobotState.getPoseEst().getRotation();
+    var inputs = new ShotCalculator.ShotInputs(
+        pose,
+        ChassisSpeeds.fromRobotRelativeSpeeds(
+            RobotState.getLastMeasuredSpeeds(), pose.getRotation()),
+        RobotState.getLastMeasuredSpeeds(),
+        Constants.Field.HubCenter,
+        Constants.Field.HubForward,
+        0.9, // vision confidence, 0 to 1
+        rot.getMeasureY().in(Degrees),
+        rot.getMeasureX().in(Degrees));
 
     shot = m_shotCalc.calculate(inputs);
 

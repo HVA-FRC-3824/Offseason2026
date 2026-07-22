@@ -6,6 +6,8 @@
 
 package frc.o2026.subsystems.drivebase.poseVision;
 
+import static edu.wpi.first.units.Units.DegreesPerSecond;
+
 import edu.wpi.first.math.Matrix;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Pose3d;
@@ -60,28 +62,67 @@ public class PoseCameraIOPhoton implements PoseCameraIO {
     return new ArrayList<VisionData>(
         m_camera.getAllUnreadResults().stream()
             .filter(PhotonPipelineResult::hasTargets)
+            .filter(result -> result.getBestTarget().poseAmbiguity > 0.3)
             .map(
                 (result) -> {
+
+                  // Use multiple tags to create a very accurate pose estimate
                   var est = estimator.estimateCoprocMultiTagPose(result);
-                  if (est.isPresent() && est.get().targetsUsed.size() >= 3) {
+                  // Because we trust this estimate so much we can reset our rotation to it
+                  // Often, the gyro will drift significantly, this corrects it
+                  if (est.isPresent() && result.getBestTarget().poseAmbiguity > 0.5) {
                     if (m_gyroResetter.isPresent())
                       m_gyroResetter.get().accept(est.get().estimatedPose.getRotation());
                     return est;
                   }
 
+                  // Use gyro data in combination with tag data to get an estimate as
+                  // accurate as your gyro
                   estimator.addHeadingData(
                       Timer.getTimestamp(), RobotState.getPoseEst().getRotation().toRotation2d());
-                  est = estimator.estimatePnpDistanceTrigSolvePose(result);
-                  if (est.isPresent()) return est;
+                  // I've found that this data can be inaccurate when rotating at high velocity
+                  if (RobotState.getAngularVelocity().lte(DegreesPerSecond.of(5.0))) {
+                    est = estimator.estimatePnpDistanceTrigSolvePose(result);
+                    if (est.isPresent()) return est;
+                  }
 
+                  // Take multiple estimations from multiple tags and average their results
                   est = estimator.estimateAverageBestTargetsPose(result);
                   if (est.isPresent()) return est;
 
+                  // No complicated sensor fusion between multiple tags or gyro
+                  // simply the best guess
                   est = estimator.estimateLowestAmbiguityPose(result);
                   return est;
                 })
             .filter(Optional::isPresent)
             .map(Optional::get)
+            // Filter frivolous pose estimates
+            // .filter(
+            //     result -> {
+            //       var speeds = RobotState.getLastMeasuredSpeeds();
+            //       var dist =
+            //           result
+            //               .estimatedPose
+            //               .getTranslation()
+            //               .getDistance(RobotState.getPoseEst().getTranslation());
+            //       return dist
+            //           < Math.hypot(speeds.vxMetersPerSecond, speeds.vyMetersPerSecond)
+            //               * Configs.Vision.ScalarPositionTolerance;
+            //     })
+            // Filter frivolous rotations
+            .filter(
+                result -> {
+                  var velocity = RobotState.getLastMeasuredSpeeds().omegaRadiansPerSecond;
+                  var delta =
+                      Math.abs(
+                          result
+                              .estimatedPose
+                              .getRotation()
+                              .minus(RobotState.getPoseEst().getRotation())
+                              .getAngle());
+                  return delta < Math.abs(velocity) * Configs.Vision.ScalarRotationTolerance;
+                })
             .map(
                 est -> {
                   var targets = est.targetsUsed.stream().mapToInt((target) -> target.fiducialId);
@@ -93,6 +134,7 @@ public class PoseCameraIOPhoton implements PoseCameraIO {
 
                   var targetArray = targets.toArray();
 
+                  // calculate the trust based on the distance of the tag(s) used
                   curStdDevs =
                       PoseCameraIO.getEstimationStdDevs(est.estimatedPose.toPose2d(), targetArray);
 

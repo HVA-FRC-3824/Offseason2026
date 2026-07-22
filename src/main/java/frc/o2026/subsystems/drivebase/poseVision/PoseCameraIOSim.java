@@ -13,6 +13,9 @@ import org.photonvision.simulation.PhotonCameraSim;
 import org.photonvision.simulation.SimCameraProperties;
 import org.photonvision.simulation.VisionSystemSim;
 
+// The difference between the photonvision hardware and photonvision sim is very small
+// We use inheritence, despite it not being good practice, due to the simplicity of the
+// sim implementation.
 public class PoseCameraIOSim extends PoseCameraIOPhoton {
 
   private int m_xRes = 1200;
