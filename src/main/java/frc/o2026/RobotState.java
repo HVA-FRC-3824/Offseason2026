@@ -33,7 +33,7 @@ public class RobotState {
     simFuelCount++;
   }
 
-  @Getter private static int simFuelCount = 8; // preloads
+  @Getter private static int simFuelCount = 8; // 8 preloads
 
   @Setter @Getter private static Rotation2d SOTMRotTarget = new Rotation2d();
   @Setter @Getter private static Pose3d poseEst = new Pose3d();

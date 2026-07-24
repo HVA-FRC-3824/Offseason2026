@@ -13,11 +13,7 @@ import java.util.Set;
 
 public interface ObjectCameraIO {
 
-  public default Optional<Angle> getRotToBestObject() {
-    return Optional.empty();
-  }
+  public Optional<Angle> getRotToBestObject();
 
-  public default Optional<Set<ObjectTargetData>> getObjects() {
-    return Optional.empty();
-  }
+  public Set<ObjectTargetData> getObjects();
 }

@@ -13,6 +13,7 @@ import static edu.wpi.first.units.Units.Rotations;
 
 import edu.wpi.first.apriltag.AprilTagFieldLayout;
 import edu.wpi.first.apriltag.AprilTagFields;
+import edu.wpi.first.math.Pair;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Pose3d;
 import edu.wpi.first.math.geometry.Rotation2d;
@@ -64,15 +65,12 @@ public final class Constants {
         Alliance.isRed()
             ? Constants.Field.RedHub.getTranslation().toTranslation2d()
             : Constants.Field.BlueHub.getTranslation().toTranslation2d();
-        
-    public static final Translation2d HubForward = Alliance.isRed() ? new Translation2d(-1, 0) : new Translation2d(1, 0);
 
-    // For passing we want to aim towards the inside of our alliance zone or towards the neutral
+    public static final Translation2d HubForward =
+        Alliance.isRed() ? new Translation2d(-1, 0) : new Translation2d(1, 0);
+
+    // For passing we want to aim towards the inside of our alliance zone
     // zone whichever is closer
-    // Either way we want the balls to be going as close to our alliance zone as possible, so aim
-    // for that
-    // - "Aim for the stars and maybe you'll reach the neutral zone" or something like that...
-
     public static final Pose2d BlueAllianceZoneClose =
         new Pose2d(AllianceWallToAllianceZoneMeters, FieldWidthMeters / 4, new Rotation2d());
     public static final Pose2d BlueAllianceZoneFar =
@@ -91,6 +89,20 @@ public final class Constants {
             FieldLengthMeters - AllianceWallToAllianceZoneMeters,
             FieldWidthMeters - (FieldWidthMeters / 4),
             new Rotation2d());
+
+    // Trench Positions
+
+    public static final Pair<Pair<Translation2d, Translation2d>, Pair<Translation2d, Translation2d>>
+        BlueTrenchEntrances =
+            new Pair<>(
+                new Pair<>(new Translation2d(3.0, 0.59), new Translation2d(6.2, 0.59)),
+                new Pair<>(new Translation2d(3.0, 7.3), new Translation2d(6.2, 7.3)));
+
+    public static final Pair<Pair<Translation2d, Translation2d>, Pair<Translation2d, Translation2d>>
+        RedTrenchEntrances =
+            new Pair<>(
+                new Pair<>(new Translation2d(13.6, 7.3), new Translation2d(10.3, 7.3)),
+                new Pair<>(new Translation2d(13.6, 0.59), new Translation2d(10.3, 0.59)));
   }
 
   public static final class Vision {
@@ -231,6 +243,11 @@ public final class Constants {
         new SwerveDriveKinematics(ModulePositions);
   }
 
+  public static final class Flywheel {
+
+    // put slip stuff and launch height and launcher x and y and yuh TODO TODO TODO
+  }
+
   public static final class CanIds {
 
     public static final int FrontLeftDriveId = 31; // Kraken X60
@@ -276,5 +293,6 @@ public final class Constants {
     // drive Input Configurations
     public static final int DrivePort = 0;
     public static final int OperatorPort = 1;
+    public static final int GuitarPort = 2;
   }
 }

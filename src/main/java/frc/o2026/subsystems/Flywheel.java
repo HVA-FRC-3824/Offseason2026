@@ -11,14 +11,12 @@ import static edu.wpi.first.units.Units.RPM;
 import static edu.wpi.first.units.Units.RotationsPerSecond;
 
 import edu.wpi.first.math.geometry.Rotation2d;
-import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.util.Units;
 import edu.wpi.first.units.measure.AngularVelocity;
 import edu.wpi.first.wpilibj.RobotBase;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
-import frc.lib.Alliance;
 import frc.lib.hardware.motor.MotorIO;
 import frc.lib.rebuilt.BallSim;
 import frc.lib.rebuilt.firecontrol.ProjectileSimulator;
@@ -51,16 +49,19 @@ public class Flywheel extends SubsystemBase {
             0.47, // drag coeff (smooth sphere)
             0.2, // Magnus coeff
             1.225, // air density
-            0.43, // exit height (m), floor to where the ball leaves the shooter
+            Units.inchesToMeters(
+                20.0), // exit height (m), floor to where the ball leaves the shooter
             Units.inchesToMeters(5.0), // flywheel diameter (m), measure with calipers
             1.83, // target height (m), from game manual
-            0.8, // slip factor (0=no grip, 1=perfect), tune this on the real robot
+            RobotBase.isSimulation()
+                ? 1.0
+                : 0.4, // slip factor (0=no grip, 1=perfect), tune this on the real robot
             90.0 - 27.0, // launch angle from horizontal, measure from CAD
-            0.02, // sim timestep
-            1500,
-            7000,
+            0.002, // sim timestep
+            1000,
+            6200,
             40,
-            5.0 // RPM search range, iterations, max sim time
+            10.0 // RPM search range, iterations, max sim time
             );
 
     ProjectileSimulator sim = new ProjectileSimulator(params);
@@ -76,7 +77,7 @@ public class Flywheel extends SubsystemBase {
 
     // in RobotContainer or wherever you set stuff up
     ShotCalculator.Config config = new ShotCalculator.Config();
-    config.launcherOffsetX = 0.23; // how far forward the launcher is from robot center (m)
+    config.launcherOffsetX = -0.23; // how far forward the launcher is from robot center (m)
     config.launcherOffsetY = 0.0; // how far left, 0 if centered
     config.mechLatencyMs = 20.0; // how long the mechanism takes to respond
     // config.maxTiltDeg = 5.0; // suppress firing when chassis tilts past this (bumps/ramps)
@@ -104,18 +105,19 @@ public class Flywheel extends SubsystemBase {
 
     var pose = RobotState.getPoseEst().toPose2d();
     var rot = RobotState.getPoseEst().getRotation();
-    var inputs = new ShotCalculator.ShotInputs(
-        pose,
-        ChassisSpeeds.fromRobotRelativeSpeeds(
-            RobotState.getLastMeasuredSpeeds(), pose.getRotation()),
-        RobotState.getLastMeasuredSpeeds(),
-        Constants.Field.HubCenter,
-        Constants.Field.HubForward,
-        0.9, // vision confidence, 0 to 1
-        rot.getMeasureY().in(Degrees),
-        rot.getMeasureX().in(Degrees));
 
-    shot = m_shotCalc.calculate(inputs);
+    shot =
+        m_shotCalc.calculate(
+            new ShotCalculator.ShotInputs(
+                pose,
+                ChassisSpeeds.fromRobotRelativeSpeeds(
+                    RobotState.getLastMeasuredSpeeds(), pose.getRotation()),
+                RobotState.getLastMeasuredSpeeds(),
+                Constants.Field.HubCenter,
+                Constants.Field.HubForward,
+                0.9, // vision confidence, 0 to 1
+                rot.getMeasureY().in(Degrees),
+                rot.getMeasureX().in(Degrees)));
 
     if (shot.driveAngle() != Rotation2d.kZero) RobotState.setSOTMRotTarget(shot.driveAngle());
 

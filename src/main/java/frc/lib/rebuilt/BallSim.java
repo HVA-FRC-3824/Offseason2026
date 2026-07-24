@@ -29,6 +29,10 @@ public class BallSim {
     return m_inst;
   }
 
+  public FuelPhysicsSim getPhysicsSim() {
+    return ballSim;
+  }
+
   private BallSim() {
 
     // Larp advantagekit
@@ -61,7 +65,7 @@ public class BallSim {
     Translation3d launchPos = new Translation3d(robotPose.getX(), robotPose.getY(), Units.inchesToMeters(20.0));
 
     double launchAngleRad = Math.toRadians(90-27);
-    double exitSpeed = 0.7 * shooterRPM * Math.PI * Units.inchesToMeters(5.0) / 60.0;
+    double exitSpeed = 1.0 * shooterRPM * Math.PI * Units.inchesToMeters(5.0) / 60.0;
     double vHorizontal = exitSpeed * Math.cos(launchAngleRad);
     double vVertical = exitSpeed * Math.sin(launchAngleRad);
 
@@ -69,6 +73,6 @@ public class BallSim {
     double vy = vHorizontal * Math.sin(robotPose.getRotation().getRadians());
 
     Translation3d launchVel = new Translation3d(vx, vy, vVertical);
-    ballSim.launchBall(launchPos, launchVel, 2000.0);
+    ballSim.launchBall(launchPos, launchVel, 60.0);
   }
 }

@@ -124,6 +124,8 @@ public class Configs {
 
   public static final class Chassis {
 
+    public static final double AssistPower = 0.9;
+
     public static final MotorConfig DriveConfig =
         new MotorConfig()
             .withSupplyCurrent(Amps.of(40.0))
@@ -159,10 +161,7 @@ public class Configs {
         RadiansPerSecondPerSecond.of(4 * Math.PI);
 
     static {
-      boolean SLOWWWWW_DOWNNNNNNN = true;
-
-      if (SLOWWWWW_DOWNNNNNNN) {
-
+      if (RobotBase.isReal()) {
         MaximumLinear = MaximumLinear.div(2.0);
         MaximumLinearAcceleration = MaximumLinearAcceleration.div(2.0);
         MaximumAngularVelocity = MaximumAngularVelocity.div(2.0);

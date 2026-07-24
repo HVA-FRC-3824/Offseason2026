@@ -6,19 +6,22 @@
 
 package frc.o2026.subsystems.drivebase.objectVision;
 
-import edu.wpi.first.math.Pair;
+import static edu.wpi.first.units.Units.Meters;
+
 import edu.wpi.first.math.geometry.Pose3d;
 import edu.wpi.first.math.geometry.Rotation2d;
-import edu.wpi.first.math.geometry.Rotation3d;
+import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.geometry.Translation3d;
+import edu.wpi.first.units.measure.Angle;
+import edu.wpi.first.units.measure.Distance;
 import frc.lib.hardware.vision.VisionConfig;
+import frc.lib.rebuilt.BallSim;
 import frc.o2026.RobotState;
 import frc.o2026.subsystems.drivebase.objectVision.ObjectVision.ObjectTargetData;
-import java.util.List;
+import java.util.Comparator;
 import java.util.Optional;
 import java.util.Set;
-import org.ironmaple.simulation.SimulatedArena;
-import org.ironmaple.simulation.gamepieces.GamePieceOnFieldSimulation;
+import java.util.stream.Collectors;
 
 public class ObjectCameraIOSim implements ObjectCameraIO {
 
@@ -27,64 +30,75 @@ public class ObjectCameraIOSim implements ObjectCameraIO {
 
   private VisionConfig m_config;
 
+  private Distance SeeableDist = Meters.of(5.0);
+
   public ObjectCameraIOSim(VisionConfig config) {
 
     m_config = config;
   }
 
   @Override
-  public Optional<Set<ObjectTargetData>> getObjects() {
+  public Set<ObjectTargetData> getObjects() {
+    Pose3d robotPose = RobotState.getSimRealPose();
 
-    Set<ObjectTargetData> objects = Set.of();
+    return BallSim.getInstance().getPhysicsSim().getBallPositions().stream()
+        .filter(
+            translation ->
+                robotPose.getTranslation().getDistance(translation) < SeeableDist.in(Meters))
+        .map(
+            translation -> {
+              // translation is field-relative. Convert to robot-relative:
+              Translation2d robotRelative2d =
+                  translation
+                      .toTranslation2d()
+                      .minus(robotPose.getTranslation().toTranslation2d())
+                      .rotateBy(robotPose.getRotation().toRotation2d().unaryMinus());
+              double relativeZ = translation.getZ() - robotPose.getZ();
+              return new Translation3d(robotRelative2d.getX(), robotRelative2d.getY(), relativeZ);
+            })
+        .filter(
+            robotToTarget -> {
+              // Convert robot-relative target position to camera-relative:
+              Translation3d cameraToTarget =
+                  robotToTarget
+                      .minus(m_config.offset().getTranslation())
+                      .rotateBy(m_config.offset().getRotation().unaryMinus());
 
-    objects.addAll(
-        calculateVisibleGamePieces(RobotState.getPoseEst().transformBy(m_config.offset())).stream()
-            .map(
-                data ->
-                    new ObjectTargetData(
-                        0, 1, data.minus(RobotState.getPoseEst().getTranslation())))
-            .toList());
+              // Target is in front of camera (X > 0)
+              if (cameraToTarget.getX() <= 0) return false;
 
-    if (objects.isEmpty()) return Optional.empty();
-    return Optional.of(objects);
+              // Check horizontal FOV
+              double horizontalAngle = Math.atan2(cameraToTarget.getY(), cameraToTarget.getX());
+              if (Math.abs(horizontalAngle) > CAMERA_HORIZONTAL_FOV.getRadians() / 2.0)
+                return false;
+
+              // Check vertical FOV
+              double verticalAngle = Math.atan2(cameraToTarget.getZ(), cameraToTarget.getX());
+              if (Math.abs(verticalAngle) > CAMERA_VERTICAL_FOV.getRadians() / 2.0) return false;
+
+              return true;
+            })
+        .map(robotToTarget -> new ObjectTargetData(0, 1.0, robotToTarget))
+        .collect(Collectors.toSet());
   }
 
-  private List<Translation3d> calculateVisibleGamePieces(Pose3d cameraPose) {
+  @Override
+  public Optional<Angle> getRotToBestObject() {
 
-    List<Pose3d> gamePiecesOnField =
-        SimulatedArena.getInstance().gamePiecesOnField().stream()
-            // .filter(piece -> piece.getType() == "Fuel")
-            .map(GamePieceOnFieldSimulation::getPose3d)
-            .toList();
+    Optional<ObjectTargetData> closestObject =
+        getObjects().stream()
+            .min(
+                Comparator.comparingDouble(data -> data.translation().toTranslation2d().getNorm()));
 
-    var pieces =
-        gamePiecesOnField.stream()
-            .map(Pose3d::getTranslation)
-            .map(
-                translation ->
-                    new Pair<>(translation, calculateCameraAngleToObject(translation, cameraPose)))
-            .filter(pair -> isObjectWithinFOV(pair.getSecond()));
+    if (closestObject.isEmpty()) return Optional.empty();
 
-    return pieces.map(pair -> pair.getFirst()).toList();
-  }
+    // Convert the robot-relative target position to camera-relative, and extract its yaw angle
+    Translation3d robotToTarget = closestObject.get().translation();
+    Translation3d cameraToTarget =
+        robotToTarget
+            .minus(m_config.offset().getTranslation())
+            .rotateBy(m_config.offset().getRotation().unaryMinus());
 
-  private Rotation3d calculateCameraAngleToObject(Translation3d objectPosition, Pose3d cameraPose) {
-    final Translation3d cameraPosition = cameraPose.getTranslation();
-
-    final Translation3d difference = cameraPosition.minus(objectPosition);
-    final Rotation3d differenceAsAngle =
-        new Rotation3d(
-            0,
-            new Rotation2d(
-                    Math.atan2(difference.getZ(), Math.hypot(difference.getX(), difference.getY())))
-                .getRadians(),
-            new Rotation2d(Math.atan2(-difference.getY(), -difference.getX())).getRadians());
-
-    return differenceAsAngle.minus(cameraPose.getRotation());
-  }
-
-  private boolean isObjectWithinFOV(Rotation3d objectRotation) {
-    return Math.abs(objectRotation.getZ()) <= CAMERA_HORIZONTAL_FOV.getRadians() / 2
-        && Math.abs(objectRotation.getY()) <= CAMERA_VERTICAL_FOV.getRadians() / 2;
+    return Optional.of(cameraToTarget.toTranslation2d().getAngle().getMeasure());
   }
 }

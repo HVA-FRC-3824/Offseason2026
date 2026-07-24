@@ -37,7 +37,7 @@ public class ObjectCameraIOPhoton implements ObjectCameraIO {
   }
 
   @Override
-  public Optional<Set<ObjectTargetData>> getObjects() {
+  public Set<ObjectTargetData> getObjects() {
 
     Set<ObjectTargetData> dataSet = new HashSet<>();
 
@@ -75,7 +75,7 @@ public class ObjectCameraIOPhoton implements ObjectCameraIO {
       }
     }
 
-    return Optional.of(dataSet);
+    return dataSet;
   }
 
   @Override

@@ -24,7 +24,9 @@ import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.InstantCommand;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
+import edu.wpi.first.wpilibj2.command.WaitCommand;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
+import frc.lib.GuitarController;
 import frc.lib.hardware.gyro.GyroIOPigeon;
 import frc.lib.hardware.motor.ctre.FlywheelSimIO;
 import frc.lib.hardware.motor.ctre.MotorSimIO;
@@ -46,7 +48,7 @@ import frc.o2026.subsystems.drivebase.poseVision.PoseCameraIOSim;
 import frc.o2026.subsystems.roller.Roller;
 import frc.o2026.subsystems.roller.RollerIOSim;
 import frc.o2026.subsystems.roller.RollerIOTalonFX;
-import java.util.Map;
+import frc.robot.lib.BLine.FlippingUtil;
 import java.util.function.Supplier;
 
 public class RobotContainer extends SubsystemBase {
@@ -142,6 +144,7 @@ public class RobotContainer extends SubsystemBase {
   private CommandXboxController m_driver = new CommandXboxController(Constants.Usb.DrivePort);
   //   private CommandXboxController m_operator = new
   // CommandXboxController(Constants.Usb.OperatorPort);
+  private GuitarController m_guitar = new GuitarController(Constants.Usb.GuitarPort);
 
   private SlewRateLimiter m_xLimiter = new SlewRateLimiter(2.0);
   private SlewRateLimiter m_yLimiter = new SlewRateLimiter(2.0);
@@ -161,50 +164,67 @@ public class RobotContainer extends SubsystemBase {
           Commands.parallel(
               m_flywheel.auto(), m_indexer.on().onlyWhile(this::readyToShoot), m_intake.stowed());
 
+  private final Supplier<Command> autoIntakeCmd =
+      () ->
+          Commands.sequence(
+              m_intake.deploy(),
+              m_roller.on(),
+              m_swerve
+                  .aimMove(
+                      () -> new ChassisSpeeds(-1.0, 0.0, 0.0),
+                      () ->
+                          m_odVision
+                              .directionToObject()
+                              .map(rot -> rot.plus(Rotation2d.k180deg)),
+                      false,
+                      false)
+                  .withTimeout(10));
+
   public RobotContainer() {
 
     m_autoChooser = AutoBuilder.buildAutoChooser();
     m_autoChooser.addOption(
         "Custom",
         Commands.sequence(
-            m_swerve.runOnce(() -> m_swerve.resetPose(new Pose2d(4.4, 7.4, Rotation2d.kCCW_90deg))),
-            m_swerve.bLinePathPose(new Pose2d(7.7, 7.5, Rotation2d.kCCW_90deg)),
-            m_roller.on(),
-            m_intake.deploy(),
-            m_swerve.bLinePathPose(new Pose2d(7.7, 0.6, Rotation2d.kCCW_90deg)),
+            m_swerve.runOnce(
+                () ->
+                    m_swerve.resetPose(
+                        FlippingUtil.flipFieldPose(new Pose2d(4.4, 7.4, Rotation2d.kCCW_90deg)))),
+            m_swerve.bLinePathPose(new Pose2d(7.7, 7.5, Rotation2d.kCCW_90deg), true),
+            autoIntakeCmd.get(),
             m_roller.off(),
             m_intake.stowed(),
-            m_swerve.bLinePathPose(new Pose2d(3.0, 0.6, Rotation2d.kCCW_90deg)),
+            m_swerve.crossTrench(),
             m_swerve
-                .pidPathPose(() -> new Pose2d(2.3, 2.8, RobotState.getSOTMRotTarget()), Map.of())
+                .pidPathPose(
+                    () ->
+                        FlippingUtil.flipFieldPose(
+                            new Pose2d(2.3, 2.8, RobotState.getSOTMRotTarget())))
                 .alongWith(shootCmd.get())));
     SmartDashboard.putData("Auto Chooser", m_autoChooser);
-
-    var targetPose = new Pose2d(9, 7.5, Rotation2d.kZero);
-    var startPose = new Pose2d(7, 1, Rotation2d.kPi);
-
-    SmartDashboard.putData("bLine to 5,5", m_swerve.bLinePathPose(targetPose));
-    SmartDashboard.putData("pp to 5,5", m_swerve.ppPathPose(targetPose));
-    SmartDashboard.putData("pid to 5,5", m_swerve.pidPathPose(targetPose, Map.of()));
-    SmartDashboard.putData("reset", m_swerve.resetPoseCmd(startPose));
 
     m_swerve.setDefaultCommand(m_swerve.drive(this::getSpeeds));
 
     m_driver.a().onTrue(m_swerve.resetGyro());
     m_driver.y().onTrue(m_swerve.fieldCentricityToggle());
-    m_driver.x().onTrue(getInit());
+    m_driver.x().whileTrue(m_swerve.crossTrench());
     m_driver
         .b()
         .onTrue(new InstantCommand(() -> OrchestraOrchestrator.playSong(Song.GymLeader), m_swerve));
 
     m_driver
         .leftBumper()
-        .whileTrue(
-            m_swerve.aimMove(
-                () -> new ChassisSpeeds(-0.2, 0.0, 0.0),
-                () -> m_odVision.directionToObject(-1),
-                true,
-                false));
+        .onTrue(
+            m_swerve
+                .aimMove(
+                    () -> new ChassisSpeeds(-1.0, 0.0, 0.0),
+                    () ->
+                        m_odVision
+                            .directionToObject()
+                            .map(rot -> rot.plus(Rotation2d.k180deg)),
+                    false,
+                    false)
+                .withTimeout(10));
 
     m_driver.rightTrigger().whileTrue(shootCmd.get().alongWith(m_swerve.aimSOTM(this::getSpeeds)));
     m_driver
@@ -216,23 +236,38 @@ public class RobotContainer extends SubsystemBase {
         .whileTrue(
             m_flywheel
                 .manual(RPM.of(6000.0))
-                .withTimeout(5)
+                .andThen(new WaitCommand(5))
                 .andThen(m_flywheel.manual(RPM.of(4000.0)))
-                .withTimeout(5)
+                .andThen(new WaitCommand(5))
                 .andThen(m_flywheel.manual(RPM.of(2000.0))));
     m_driver.rightBumper().onFalse(m_flywheel.off());
 
-    m_driver.leftTrigger().whileTrue(Commands.parallel(m_intake.deploy(), m_roller.on()));
+    m_driver
+        .leftTrigger()
+        .whileTrue(
+            Commands.parallel(
+                m_intake.deploy(),
+                m_roller.on(),
+                m_swerve.targetAssistedDrive(
+                    this::getSpeeds,
+                    () ->
+                        m_odVision
+                            .directionToObject()
+                            .map(rot -> rot.plus(Rotation2d.k180deg)))));
     m_driver.leftTrigger().onFalse(m_roller.off());
 
     m_driver.povUp().onTrue(m_intake.stowed());
     m_driver.povDown().onTrue(m_intake.deploy());
 
+    m_guitar.lowE().onTrue(m_swerve.crossTrench());
+    m_guitar
+        .highE()
+        .onTrue(new InstantCommand(() -> OrchestraOrchestrator.playSong(Song.GymLeader), m_swerve));
+
     NamedCommands.registerCommand(
         "ShootAll", shootCmd.get().alongWith(m_swerve.aimShoot()).repeatedly());
+    NamedCommands.registerCommand("AutoIntake", autoIntakeCmd.get());
 
-    new EventTrigger("ShootAll")
-        .whileTrue(shootCmd.get().alongWith(m_swerve.aimShoot()).repeatedly());
     new EventTrigger("DeployIntake").onTrue(m_intake.deploy().andThen(m_roller.on()));
     new EventTrigger("StowIntake").onTrue(m_intake.stowed());
   }
@@ -276,11 +311,6 @@ public class RobotContainer extends SubsystemBase {
         Configs.Chassis.MaximumLinear.times(strafe),
         Configs.Chassis.MaximumLinear.times(forwards),
         Configs.Chassis.MaximumAngularVelocity.times(rot));
-  }
-
-  public Command getInit() {
-
-    return Commands.parallel(m_swerve.resetSwerveModules()).withName("Init");
   }
 
   public Command getAuto() {
