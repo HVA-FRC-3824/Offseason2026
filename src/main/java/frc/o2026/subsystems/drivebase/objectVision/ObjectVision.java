@@ -12,7 +12,6 @@ import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.geometry.Translation3d;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.o2026.RobotState;
-
 import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
@@ -37,14 +36,21 @@ public class ObjectVision extends SubsystemBase {
     m_fieldRelativeODTargets =
         objects.stream()
             .map(
-                object -> object.translation().toTranslation2d()
-                      .rotateBy(RobotState.getPoseEst().toPose2d().getRotation()) // was incorrectly negated before
-                      .plus(RobotState.getPoseEst().toPose2d().getTranslation())
-                )
+                object ->
+                    object
+                        .translation()
+                        .toTranslation2d()
+                        .rotateBy(
+                            RobotState.getPoseEst()
+                                .toPose2d()
+                                .getRotation()) // was incorrectly negated before
+                        .plus(RobotState.getPoseEst().toPose2d().getTranslation()))
             .toList();
 
     Pose2d[] poseArray =
-        m_fieldRelativeODTargets.stream().map(t -> new Pose2d(t, new Rotation2d())).toArray(Pose2d[]::new);
+        m_fieldRelativeODTargets.stream()
+            .map(t -> new Pose2d(t, new Rotation2d()))
+            .toArray(Pose2d[]::new);
     Logger.recordOutput("odObject", poseArray);
   }
 
@@ -53,7 +59,8 @@ public class ObjectVision extends SubsystemBase {
     return getClosestObject()
         .map(
             translation -> {
-              Rotation2d angle = translation.minus(RobotState.getPoseEst().toPose2d().getTranslation()).getAngle();
+              Rotation2d angle =
+                  translation.minus(RobotState.getPoseEst().toPose2d().getTranslation()).getAngle();
               Logger.recordOutput("objectYaw", angle.getDegrees());
               return angle;
             });
@@ -67,7 +74,9 @@ public class ObjectVision extends SubsystemBase {
 
     // Compare distance to the robot's position, not the field origin.
     return poses.stream()
-        .min(Comparator.comparingDouble(object -> object.getDistance(RobotState.getPoseEst().toPose2d().getTranslation())));
+        .min(
+            Comparator.comparingDouble(
+                object -> object.getDistance(RobotState.getPoseEst().toPose2d().getTranslation())));
   }
 
   public boolean hasObjects() {

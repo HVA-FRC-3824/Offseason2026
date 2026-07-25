@@ -7,75 +7,6 @@
    "grid_layout": {
     "layouts": [
      {
-      "title": "Pathing Commands",
-      "x": 0.0,
-      "y": 0.0,
-      "width": 256.0,
-      "height": 384.0,
-      "type": "List Layout",
-      "properties": {
-       "label_position": "HIDDEN"
-      },
-      "children": [
-       {
-        "title": "bLine to 5,5",
-        "x": 0.0,
-        "y": 256.0,
-        "width": 256.0,
-        "height": 128.0,
-        "type": "Command",
-        "properties": {
-         "topic": "/SmartDashboard/bLine to 5,5",
-         "period": 0.06,
-         "show_type": false,
-         "maximize_button_space": true
-        }
-       },
-       {
-        "title": "pp to 5,5",
-        "x": 0.0,
-        "y": 128.0,
-        "width": 256.0,
-        "height": 128.0,
-        "type": "Command",
-        "properties": {
-         "topic": "/SmartDashboard/pp to 5,5",
-         "period": 0.06,
-         "show_type": false,
-         "maximize_button_space": true
-        }
-       },
-       {
-        "title": "pid to 5,5",
-        "x": 0.0,
-        "y": 128.0,
-        "width": 256.0,
-        "height": 128.0,
-        "type": "Command",
-        "properties": {
-         "topic": "/SmartDashboard/pid to 5,5",
-         "period": 0.06,
-         "show_type": false,
-         "maximize_button_space": true
-        }
-       },
-       {
-        "title": "reset",
-        "x": 0.0,
-        "y": 128.0,
-        "width": 256.0,
-        "height": 128.0,
-        "type": "Command",
-        "properties": {
-         "topic": "/SmartDashboard/reset",
-         "period": 0.06,
-         "show_type": false,
-         "maximize_button_space": true
-        }
-       }
-      ]
-     },
-     {
       "title": "VisionLastReadings",
       "x": 256.0,
       "y": 384.0,
@@ -132,10 +63,10 @@
      },
      {
       "title": "List Layout",
-      "x": 0.0,
-      "y": 384.0,
+      "x": 256.0,
+      "y": 640.0,
       "width": 256.0,
-      "height": 128.0,
+      "height": 256.0,
       "type": "List Layout",
       "properties": {
        "label_position": "LEFT"
@@ -173,8 +104,8 @@
     "containers": [
      {
       "title": "Scheduler",
-      "x": 512.0,
-      "y": 0.0,
+      "x": 0.0,
+      "y": 640.0,
       "width": 256.0,
       "height": 384.0,
       "type": "Scheduler",
@@ -184,23 +115,9 @@
       }
      },
      {
-      "title": "I am being called",
-      "x": 768.0,
-      "y": 128.0,
-      "width": 128.0,
-      "height": 128.0,
-      "type": "Text Display",
-      "properties": {
-       "topic": "/AdvantageKit/RealOutputs/I am being called",
-       "period": 0.06,
-       "data_type": "double",
-       "show_submit_button": false
-      }
-     },
-     {
       "title": "Auto Chooser",
-      "x": 256.0,
-      "y": 0.0,
+      "x": 0.0,
+      "y": 384.0,
       "width": 256.0,
       "height": 128.0,
       "type": "ComboBox Chooser",
@@ -212,8 +129,8 @@
      },
      {
       "title": "Song Chooser",
-      "x": 256.0,
-      "y": 128.0,
+      "x": 0.0,
+      "y": 512.0,
       "width": 256.0,
       "height": 128.0,
       "type": "ComboBox Chooser",
@@ -226,7 +143,7 @@
      {
       "title": "BatteryVoltage (Volts)",
       "x": 256.0,
-      "y": 256.0,
+      "y": 896.0,
       "width": 128.0,
       "height": 128.0,
       "type": "Large Text Display",
@@ -239,7 +156,7 @@
      {
       "title": "TotalCurrent (Amps)",
       "x": 384.0,
-      "y": 256.0,
+      "y": 896.0,
       "width": 128.0,
       "height": 128.0,
       "type": "Large Text Display",
@@ -247,6 +164,104 @@
        "topic": "/SmartDashboard/BatterySim/TotalCurrent (Amps)",
        "period": 0.06,
        "data_type": "double"
+      }
+     },
+     {
+      "title": "Left",
+      "x": 0.0,
+      "y": 128.0,
+      "width": 256.0,
+      "height": 128.0,
+      "type": "Command",
+      "properties": {
+       "topic": "/SmartDashboard/Left",
+       "period": 0.06,
+       "show_type": false,
+       "maximize_button_space": true
+      }
+     },
+     {
+      "title": "Down",
+      "x": 128.0,
+      "y": 256.0,
+      "width": 256.0,
+      "height": 128.0,
+      "type": "Command",
+      "properties": {
+       "topic": "/SmartDashboard/Down",
+       "period": 0.06,
+       "show_type": false,
+       "maximize_button_space": true
+      }
+     },
+     {
+      "title": "Right",
+      "x": 256.0,
+      "y": 128.0,
+      "width": 256.0,
+      "height": 128.0,
+      "type": "Command",
+      "properties": {
+       "topic": "/SmartDashboard/Right",
+       "period": 0.06,
+       "show_type": false,
+       "maximize_button_space": true
+      }
+     },
+     {
+      "title": "Up",
+      "x": 128.0,
+      "y": 0.0,
+      "width": 256.0,
+      "height": 128.0,
+      "type": "Command",
+      "properties": {
+       "topic": "/SmartDashboard/Up",
+       "period": 0.06,
+       "show_type": false,
+       "maximize_button_space": true
+      }
+     },
+     {
+      "title": "SOTM",
+      "x": 512.0,
+      "y": 0.0,
+      "width": 256.0,
+      "height": 128.0,
+      "type": "Command",
+      "properties": {
+       "topic": "/SmartDashboard/SOTM",
+       "period": 0.06,
+       "show_type": false,
+       "maximize_button_space": true
+      }
+     },
+     {
+      "title": "Auto Intake",
+      "x": 512.0,
+      "y": 128.0,
+      "width": 256.0,
+      "height": 128.0,
+      "type": "Command",
+      "properties": {
+       "topic": "/SmartDashboard/Auto Intake",
+       "period": 0.06,
+       "show_type": false,
+       "maximize_button_space": true
+      }
+     },
+     {
+      "title": "Cross Trench",
+      "x": 512.0,
+      "y": 256.0,
+      "width": 256.0,
+      "height": 128.0,
+      "type": "Command",
+      "properties": {
+       "topic": "/SmartDashboard/Cross Trench",
+       "period": 0.06,
+       "show_type": false,
+       "maximize_button_space": true
       }
      }
     ]

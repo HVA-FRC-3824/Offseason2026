@@ -38,6 +38,7 @@ public class RobotState {
   @Setter @Getter private static Rotation2d SOTMRotTarget = new Rotation2d();
   @Setter @Getter private static Pose3d poseEst = new Pose3d();
   @Setter @Getter private static Pose3d simRealPose = new Pose3d();
+  @Setter @Getter private static ChassisSpeeds simSpeeds = new ChassisSpeeds();
   @Setter @Getter private static AngularVelocity angularVelocity = DegreesPerSecond.of(0.0);
   @Setter @Getter private static ChassisSpeeds lastMeasuredSpeeds = new ChassisSpeeds();
   @Setter @Getter private static boolean isSimIntaking = false;

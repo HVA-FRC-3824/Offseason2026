@@ -141,10 +141,10 @@ public class SwerveIOSim implements SwerveIO {
 
     Pose3d simPose3d = m_robotBumpSim.update(simPose, fieldRelativeSpeeds, 20);
     if (m_robotBumpSim.isOnRamp())
-      m_swerveDriveSimulation.setSimulationWorldPose(
-          m_robotBumpSim.getSimWorldPose(simPose3d.toPose2d()));
+      simPose3d = new Pose3d(m_robotBumpSim.getSimWorldPose(simPose3d.toPose2d()));
 
     RobotState.setSimRealPose(simPose3d);
+    RobotState.setSimSpeeds(m_swerveDriveSimulation.getActualSpeedsFieldRelative());
 
     Logger.recordOutput("Sim/Pose3d", simPose3d);
   }

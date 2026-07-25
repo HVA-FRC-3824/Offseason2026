@@ -73,6 +73,10 @@ public class BallSim {
     double vy = vHorizontal * Math.sin(robotPose.getRotation().getRadians());
 
     Translation3d launchVel = new Translation3d(vx, vy, vVertical);
+
+    var speeds = RobotState.getSimSpeeds();
+    launchVel = launchVel.plus(new Translation3d(speeds.vxMetersPerSecond, speeds.vyMetersPerSecond, speeds.omegaRadiansPerSecond));
+
     ballSim.launchBall(launchPos, launchVel, 60.0);
   }
 }
