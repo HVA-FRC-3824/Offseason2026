@@ -16,6 +16,7 @@ import com.pathplanner.lib.controllers.PPHolonomicDriveController;
 import com.pathplanner.lib.path.GoalEndState;
 import com.pathplanner.lib.path.IdealStartingState;
 import com.pathplanner.lib.path.PathPlannerPath;
+import com.pathplanner.lib.util.FlippingUtil;
 import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.math.geometry.Pose2d;
@@ -25,12 +26,13 @@ import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.util.Units;
 import edu.wpi.first.wpilibj2.command.Command;
-import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.lib.Alliance;
 import frc.o2026.Configs;
 import frc.o2026.Constants;
 import frc.o2026.RobotState;
+import frc.o2026.subsystems.drivebase.objectVision.ObjectCameraIO;
+import frc.o2026.subsystems.drivebase.objectVision.ObjectVision;
 import frc.robot.lib.BLine.FollowPath;
 import frc.robot.lib.BLine.Path;
 import frc.robot.lib.BLine.Path.PathElement;
@@ -43,17 +45,20 @@ public class Swerve extends SubsystemBase {
 
   private SwerveIO m_io;
 
+  private ObjectVision m_objectDetection;
+
   private boolean m_fieldCentricity = true;
 
   FollowPath.Builder m_pathBuilder;
 
   private PIDController m_xController = new PIDController(2, 0, 0);
   private PIDController m_yController = new PIDController(2, 0, 0);
-  private PIDController m_rotController = new PIDController(5, 0.05, 0.03);
+  private PIDController m_rotController = new PIDController(3, 0.05, 0.3);
 
-  public Swerve(SwerveIO io) {
+  public Swerve(SwerveIO io, ObjectCameraIO odIo) {
 
     m_io = io;
+    m_objectDetection = new ObjectVision(odIo);
 
     m_rotController.enableContinuousInput(-Math.PI, Math.PI);
     m_rotController.setTolerance(Units.degreesToRadians(5.0));
@@ -195,9 +200,6 @@ public class Swerve extends SubsystemBase {
 
   public Command ppPathPoses(List<Pose2d> poses) {
 
-    // var poses = List.of(getPose().toPose2d());
-    // poses.addAll(targetPoses);
-
     var speed =
         Math.hypot(getChassisSpeeds().vxMetersPerSecond, getChassisSpeeds().vyMetersPerSecond);
     // Build and return the command
@@ -226,7 +228,8 @@ public class Swerve extends SubsystemBase {
 
     return run(() -> {
           var currPose = getPose().toPose2d();
-          var targetPose = target.get();
+          var targetPose =
+              Alliance.isRed() ? FlippingUtil.flipFieldPose(target.get()) : target.get();
           Logger.recordOutput("pid target", targetPose);
 
           var speeds =
@@ -306,8 +309,15 @@ public class Swerve extends SubsystemBase {
         .withName("AimMove");
   }
 
+  public Command targetAssistedDrive(Supplier<ChassisSpeeds> speedsSupplier) {
+
+    return targetAssistedDrive(speedsSupplier, m_fieldCentricity);
+  }
+
   public Command targetAssistedDrive(
-      Supplier<ChassisSpeeds> speedsSupplier, Supplier<Optional<Rotation2d>> angleSupplier) {
+      Supplier<ChassisSpeeds> speedsSupplier, boolean fieldCentricity) {
+
+    PIDController aimController = m_rotController;
 
     return run(() -> {
           drive(
@@ -315,15 +325,23 @@ public class Swerve extends SubsystemBase {
                   speedsSupplier.get().vxMetersPerSecond,
                   speedsSupplier.get().vyMetersPerSecond,
                   speedsSupplier.get().omegaRadiansPerSecond
-                      + (angleSupplier.get().isEmpty()
-                          ? 0.0
-                          : m_rotController.calculate(
-                                  m_io.getGyroHeading().getRadians(),
-                                  angleSupplier.get().get().getRadians())
-                              * Configs.Chassis.AssistPower)),
-              m_fieldCentricity);
+                      + aimController.calculate(
+                              m_objectDetection.directionToObject().get().getRadians(), 0.0)
+                          * Configs.Chassis.AssistPower),
+              fieldCentricity);
         })
+        .onlyIf(m_objectDetection::hasObjects)
         .withName("AimAssistCHEATER");
+  }
+
+  public Command autoIntake() {
+
+    return aimMove(
+            () -> new ChassisSpeeds(-1.0, 0.0, 0.0),
+            () -> m_objectDetection.directionToObject().map(rot -> rot.plus(Rotation2d.k180deg)),
+            false,
+            false)
+        .onlyWhile(m_objectDetection::hasObjects);
   }
 
   public Command crossTrench() {
@@ -373,6 +391,11 @@ public class Swerve extends SubsystemBase {
     return m_rotController.atSetpoint();
   }
 
+  public boolean hasObjects() {
+
+    return m_objectDetection.hasObjects();
+  }
+
   public Command resetGyro() {
 
     return runOnce(
@@ -386,27 +409,27 @@ public class Swerve extends SubsystemBase {
   }
 
   public Command fieldCentricityOn() {
-    return Commands.runOnce(() -> m_fieldCentricity = true).withName("Field Centricity On");
+    return runOnce(() -> m_fieldCentricity = true).withName("Field Centricity On");
   }
 
-  public Command fieldCentricityToggle() {
-    return Commands.runOnce(() -> m_fieldCentricity = !m_fieldCentricity)
+  public Command toggleFieldCentricity() {
+    return runOnce(() -> m_fieldCentricity = !m_fieldCentricity)
         .withName("Field Centricity Toggle");
   }
 
   public Command fieldCentricityOff() {
-    return Commands.runOnce(() -> m_fieldCentricity = false).withName("Field Centricity Off");
+    return runOnce(() -> m_fieldCentricity = false).withName("Field Centricity Off");
   }
 
-  public Command xModeToggle() {
-    return Commands.runOnce(() -> m_io.setIsXMode(!m_io.getIsXMode())).withName("XMode ON!!!");
+  public Command toggleXMode() {
+    return runOnce(() -> m_io.setIsXMode(!m_io.getIsXMode())).withName("XMode ON!!!");
   }
 
   public Command xModeOn() {
-    return Commands.runOnce(() -> m_io.setIsXMode(true)).withName("XMode ON!!!");
+    return runOnce(() -> m_io.setIsXMode(true)).withName("XMode ON!!!");
   }
 
   public Command xModeOff() {
-    return Commands.runOnce(() -> m_io.setIsXMode(false)).withName("XMode off :(");
+    return runOnce(() -> m_io.setIsXMode(false)).withName("XMode off :(");
   }
 }

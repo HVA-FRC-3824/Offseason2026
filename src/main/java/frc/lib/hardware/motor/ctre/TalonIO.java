@@ -162,7 +162,7 @@ public class TalonIO implements MotorIO {
     var status = m_motor.setControl(new NeutralOut());
     Logger.recordOutput("MotorErr/Talon " + m_motor.getDeviceID(), status.toString());
 
-    OrchestraOrchestrator.addInstrument(m_motor);
+    // OrchestraOrchestrator.addInstrument(m_motor);
 
     m_lastRef = 0.0;
   }

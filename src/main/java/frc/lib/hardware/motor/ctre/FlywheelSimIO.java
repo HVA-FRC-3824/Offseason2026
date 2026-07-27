@@ -6,7 +6,6 @@
 
 package frc.lib.hardware.motor.ctre;
 
-import static edu.wpi.first.units.Units.Rotations;
 import static edu.wpi.first.units.Units.RotationsPerSecond;
 import static edu.wpi.first.units.Units.Volts;
 
@@ -28,8 +27,6 @@ public class FlywheelSimIO extends TalonIO {
   private final FlywheelSim m_motorSimModel;
 
   private double m_gearRatio;
-
-  private Angle m_position = Rotations.of(0.0);
 
   public FlywheelSimIO(
       int id, MotorConfig config, boolean isX60, DCMotor gearbox, double moi, double gearRatio) {
@@ -88,6 +85,5 @@ public class FlywheelSimIO extends TalonIO {
   public void resetEncoder(Angle angle) {
 
     super.resetEncoder(angle);
-    m_position = Rotations.of(0.0);
   }
 }

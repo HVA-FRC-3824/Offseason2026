@@ -52,7 +52,7 @@ public class BallSim {
       Constants.Chassis.TrackWidthMeters.in(Meters) / -2, 
       Constants.Chassis.TrackWidthMeters.in(Meters) / 2, 
       () -> RobotState.isSimIntaking(), 
-      () -> RobotState.incrementFuel());
+      () -> RobotState.incFuel());
   }
 
   public void update() {

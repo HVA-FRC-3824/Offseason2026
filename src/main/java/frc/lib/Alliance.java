@@ -6,7 +6,9 @@
 
 package frc.lib;
 
+import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.wpilibj.DriverStation;
+import frc.robot.lib.BLine.FlippingUtil;
 
 // This logic is always so ugly and cluttering
 // Abstract to here.
@@ -14,5 +16,9 @@ public class Alliance {
   public static boolean isRed() {
     return DriverStation.getAlliance().orElse(DriverStation.Alliance.Red)
         == DriverStation.Alliance.Red;
+  }
+
+  public static Pose2d flipOnRed(Pose2d pose) {
+    return isRed() ? FlippingUtil.flipFieldPose(pose) : pose;
   }
 }

@@ -18,11 +18,6 @@ public class GuitarController {
     m_controller = new CommandXboxController(port);
   }
 
-  public Trigger lowE() {
-
-    return m_controller.a();
-  }
-
   public Trigger A() {
 
     return m_controller.b();
@@ -43,8 +38,8 @@ public class GuitarController {
     return m_controller.leftBumper();
   }
 
-  public Trigger highE() {
+  public Trigger E() {
 
-    return m_controller.rightBumper();
+    return m_controller.rightBumper().or(m_controller.a());
   }
 }

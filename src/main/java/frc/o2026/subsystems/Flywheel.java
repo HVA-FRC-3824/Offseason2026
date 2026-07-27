@@ -127,7 +127,7 @@ public class Flywheel extends SubsystemBase {
           () -> {
             if (m_validShot && RobotState.isSimIndexing() && RobotState.getSimFuelCount() > 0) {
 
-              RobotState.decrementFuel();
+              RobotState.decFuel();
 
               BallSim.getInstance().launchAtRPM(RobotState.getSimRealPose().toPose2d(), shot.rpm());
             }

@@ -8,11 +8,11 @@ use vigem_client::{Client, TargetId, XButtons, XGamepad, Xbox360Wired, XButtons 
 // ---------- Configuration ----------
 
 const SAMPLE_WINDOW: usize = 4096;   // samples analyzed per pitch estimate
-const HOP_SIZE: usize = 1024;        // how often detection runs
-const ONSET_THRESHOLD: f32 = 0.0015;   // RMS amplitude gate, tune to your pickup level
-const YIN_THRESHOLD: f32 = 0.1;     // YIN confidence threshold
-const RETRIGGER_COOLDOWN_MS: u64 = 1; // ignore repeat triggers on same string
-const BUTTON_HOLD_MS: u64 = 20;      // virtual button hold duration
+const HOP_SIZE: usize = 2048;        // how often detection runs
+const ONSET_THRESHOLD: f32 = 0.002;   // RMS amplitude gate, tune to your pickup level
+const YIN_THRESHOLD: f32 = 0.14;     // YIN confidence threshold
+const RETRIGGER_COOLDOWN_MS: u64 = 500; // ignore repeat triggers on same string
+const BUTTON_HOLD_MS: u64 = 1000;      // virtual button hold duration
 
 // Standard tuning fundamental frequencies (Hz), low E to high E
 const STRING_FREQS: [(&str, f32); 6] = [

@@ -117,7 +117,7 @@ public final class Constants {
                     Inches.of(10.0)), // up
                 new Rotation3d(
                     Degrees.of(0.0), // roll
-                    Degrees.of(10.0), // pitch
+                    Degrees.of(-10.0), // pitch
                     Degrees.of(180.0)))); // yaw
 
     public static final VisionConfig LimelightOfDoomAndDespair =
@@ -206,7 +206,7 @@ public final class Constants {
 
     // NOTE: The absolute encoder range is 0.5 to -0.5
     // These are the absolute encoder values that correspond to the wheels facing "forward"
-    public static final Angle FrontRightForwardsAngle = Rotations.of(-1.7334);
+    public static final Angle FrontRightForwardsAngle = Rotations.of(-0.1396);
     public static final Angle FrontLeftForwardsAngle = Rotations.of(-0.4800);
     public static final Angle BackRightForwardsAngle = Rotations.of(0.05908);
     public static final Angle BackLeftForwardsAngle = Rotations.of(0.08325);

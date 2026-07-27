@@ -59,9 +59,7 @@ public class PoseCameraIOLimelight implements PoseCameraIO {
 
     // Filter out frivolous readings
     if (mt2 == null) return new ArrayList<>();
-    if (mt2.pose.getX() < 1e-4
-        && mt2.pose.getRotation().getRadians() < 1e-4
-        && mt2.pose.getY() < 1e-4) return new ArrayList<>();
+    if (mt2.pose.getX() < 1e-4 && mt2.pose.getY() < 1e-4) return new ArrayList<>();
 
     var tags = List.of(mt2.rawFiducials).stream().mapToInt((tag) -> tag.id).boxed().toList();
 

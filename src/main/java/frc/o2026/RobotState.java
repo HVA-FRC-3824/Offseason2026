@@ -25,11 +25,11 @@ public class RobotState {
     return m_instance;
   }
 
-  public static void decrementFuel() {
+  public static void decFuel() {
     simFuelCount--;
   }
 
-  public static void incrementFuel() {
+  public static void incFuel() {
     simFuelCount++;
   }
 

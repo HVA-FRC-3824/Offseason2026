@@ -57,7 +57,7 @@ public interface PoseCameraIO {
     // Precalculation - see how many tags we found, and calculate an average-distance metric
     for (var tgt : targets) {
       var tagPose = PoseCameraIO.getTagPose(tgt);
-      if (tagPose == new Pose3d()) continue;
+      if (tagPose.equals(new Pose3d())) continue;
 
       avgDist += tagPose.toPose2d().getTranslation().getDistance(estimatedPose.getTranslation());
     }

@@ -21,15 +21,13 @@ import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
-import edu.wpi.first.wpilibj2.command.InstantCommand;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
+import frc.lib.Alliance;
 import frc.lib.GuitarController;
 import frc.lib.hardware.gyro.GyroIOPigeon;
 import frc.lib.hardware.motor.ctre.FlywheelSimIO;
 import frc.lib.hardware.motor.ctre.MotorSimIO;
-import frc.lib.hardware.motor.ctre.OrchestraOrchestrator;
-import frc.lib.hardware.motor.ctre.OrchestraOrchestrator.Song;
 import frc.lib.hardware.motor.ctre.TalonIO;
 import frc.o2026.subsystems.Flywheel;
 import frc.o2026.subsystems.Indexer;
@@ -39,7 +37,6 @@ import frc.o2026.subsystems.drivebase.SwerveIOReal;
 import frc.o2026.subsystems.drivebase.SwerveIOSim;
 import frc.o2026.subsystems.drivebase.objectVision.ObjectCameraIOPhoton;
 import frc.o2026.subsystems.drivebase.objectVision.ObjectCameraIOSim;
-import frc.o2026.subsystems.drivebase.objectVision.ObjectVision;
 import frc.o2026.subsystems.drivebase.poseVision.PoseCameraIOLimelight;
 import frc.o2026.subsystems.drivebase.poseVision.PoseCameraIOPhoton;
 import frc.o2026.subsystems.drivebase.poseVision.PoseCameraIOSim;
@@ -47,6 +44,7 @@ import frc.o2026.subsystems.roller.Roller;
 import frc.o2026.subsystems.roller.RollerIOSim;
 import frc.o2026.subsystems.roller.RollerIOTalonFX;
 import java.util.function.Supplier;
+import org.littletonrobotics.junction.Logger;
 
 public class RobotContainer extends SubsystemBase {
 
@@ -61,10 +59,7 @@ public class RobotContainer extends SubsystemBase {
               : new SwerveIOSim(
                   new PoseCameraIOSim(Constants.Vision.FrontCamConfig),
                   new PoseCameraIOSim(Constants.Vision.WebCam),
-                  new PoseCameraIOSim(Constants.Vision.LimelightOfDoomAndDespair)));
-
-  private ObjectVision m_odVision =
-      new ObjectVision(
+                  new PoseCameraIOSim(Constants.Vision.LimelightOfDoomAndDespair)),
           RobotBase.isReal()
               ? new ObjectCameraIOPhoton(Constants.Vision.BackCamConfig)
               : new ObjectCameraIOSim(Constants.Vision.BackCamConfig));
@@ -169,18 +164,10 @@ public class RobotContainer extends SubsystemBase {
                   m_intake.deploy(),
                   m_roller.on(),
                   m_swerve
-                      .aimMove(
-                          () -> new ChassisSpeeds(-1.0, 0.0, 0.0),
-                          () ->
-                              m_odVision
-                                  .directionToObject()
-                                  .map(rot -> rot.plus(Rotation2d.k180deg)),
-                          false,
-                          false)
-                      .until(m_odVision::hasObjects)
+                      .autoIntake()
                       .andThen(
                           m_swerve.drive(() -> new ChassisSpeeds(0.5, 0.0, Math.PI / 2), false))
-                      .until(m_odVision::hasObjects)
+                      .until(m_swerve::hasObjects)
                       .repeatedly())
               .withTimeout(3)
               .andThen(Commands.sequence(m_roller.off(), m_intake.stowed()));
@@ -192,12 +179,19 @@ public class RobotContainer extends SubsystemBase {
         "Custom",
         Commands.sequence(
                 m_swerve.runOnce(
-                    () -> m_swerve.resetPose((new Pose2d(4.4, 7.4, Rotation2d.kCCW_90deg)))),
-                m_swerve.bLinePathPose(new Pose2d(7.7, 7.5, Rotation2d.kCCW_90deg)).withTimeout(3),
+                    () ->
+                        m_swerve.resetPose(
+                            Alliance.flipOnRed(new Pose2d(4.4, 7.4, Rotation2d.kCCW_90deg)))),
+                m_swerve
+                    .bLinePathPose(Alliance.flipOnRed(new Pose2d(7.7, 7.5, Rotation2d.kCCW_90deg)))
+                    .withTimeout(3),
                 autoIntakeCmd.get(),
                 m_swerve.crossTrench(),
                 m_swerve
-                    .pidPathPose(() -> (new Pose2d(2.3, 2.8, RobotState.getSOTMRotTarget())))
+                    .pidPathPose(
+                        () ->
+                            (Alliance.flipOnRed(
+                                new Pose2d(2.3, 2.8, RobotState.getSOTMRotTarget()))))
                     .alongWith(shootCmd.get()))
             .andThen(m_indexer.off()));
     SmartDashboard.putData("Auto Chooser", m_autoChooser);
@@ -207,10 +201,9 @@ public class RobotContainer extends SubsystemBase {
     m_indexer.setDefaultCommand(m_indexer.off());
     m_roller.setDefaultCommand(m_roller.off());
 
-    m_driver.a().onTrue(autoIntakeCmd.get());
-    m_driver.y().onTrue(m_autoChooser.getSelected());
-    m_driver.x().whileTrue(m_swerve.crossTrench());
-    m_driver.b().whileTrue(SOTM(new Translation2d(2.0, 3.9)));
+    m_driver.a().onTrue(m_swerve.resetGyro());
+    m_driver.b().onTrue(m_swerve.toggleXMode());
+    m_driver.y().onTrue(m_swerve.toggleFieldCentricity());
 
     m_driver.rightTrigger().whileTrue(shootCmd.get().alongWith(m_swerve.aimSOTM(this::getSpeeds)));
 
@@ -218,31 +211,48 @@ public class RobotContainer extends SubsystemBase {
         .leftTrigger()
         .whileTrue(
             Commands.parallel(
-                m_intake.deploy(),
-                m_roller.on(),
-                m_swerve.targetAssistedDrive(
-                    this::getSpeeds,
-                    () ->
-                        m_odVision.directionToObject().map(rot -> rot.plus(Rotation2d.k180deg)))));
+                m_intake.deploy(), m_roller.on(), m_swerve.targetAssistedDrive(this::getSpeeds)));
 
     SmartDashboard.putData("Auto Intake", autoIntakeCmd.get());
     SmartDashboard.putData("Cross Trench", m_swerve.crossTrench());
     SmartDashboard.putData("SOTM", SOTM(new Translation2d(2.0, 3.9)));
 
-    SmartDashboard.putData("yUp", m_swerve.drive(() -> new ChassisSpeeds(-1.0, 0.0, 0.0), true));
-    SmartDashboard.putData("yDown", m_swerve.drive(() -> new ChassisSpeeds(1.0, 0.0, 0.0), true));
-    SmartDashboard.putData("xLeft", m_swerve.drive(() -> new ChassisSpeeds(0.0, -1.0, 0.0), true));
-    SmartDashboard.putData("xRight", m_swerve.drive(() -> new ChassisSpeeds(0.0, 1.0, 0.0), true));
+    SmartDashboard.putData("yUp", m_swerve.drive(() -> new ChassisSpeeds(-0.5, 0.0, 0.0), true));
+    SmartDashboard.putData("yDown", m_swerve.drive(() -> new ChassisSpeeds(0.5, 0.0, 0.0), true));
+    SmartDashboard.putData("xLeft", m_swerve.drive(() -> new ChassisSpeeds(0.0, -0.5, 0.0), true));
+    SmartDashboard.putData("xRight", m_swerve.drive(() -> new ChassisSpeeds(0.0, 0.5, 0.0), true));
 
     SmartDashboard.putData(
-        "rotLeft", m_swerve.drive(() -> new ChassisSpeeds(0.0, 0.0, Math.PI), true));
+        "rotLeft", m_swerve.drive(() -> new ChassisSpeeds(0.0, 0.0, Math.PI / 2), true));
     SmartDashboard.putData(
-        "rotRight", m_swerve.drive(() -> new ChassisSpeeds(0.0, 0.0, -Math.PI), true));
+        "rotRight", m_swerve.drive(() -> new ChassisSpeeds(0.0, 0.0, -Math.PI / 2), true));
 
-    m_guitar.lowE().onTrue(m_swerve.crossTrench());
-    m_guitar
-        .highE()
-        .onTrue(new InstantCommand(() -> OrchestraOrchestrator.playSong(Song.GymLeader), m_swerve));
+    // m_guitar.lowE().debounce(0.5).onTrue(m_swerve.crossTrench());
+    // m_guitar.A().debounce(0.5).onTrue(m_swerve.drive(() -> new ChassisSpeeds(-0.5, 0.0, 0.0)));
+    // m_guitar.D().debounce(0.5).onTrue(m_swerve.drive(() -> new ChassisSpeeds(0.5, 0.0, 0.0)));
+    // m_guitar.G().debounce(0.5).onTrue(m_swerve.drive(() -> new ChassisSpeeds(0.0, -0.5, 0.0)));
+    // m_guitar.B().debounce(0.5).onTrue(m_swerve.drive(() -> new ChassisSpeeds(0.0, 0.5, 0.0)));
+    // m_guitar.highE().debounce(0.5).onTrue(m_swerve.crossTrench());
+
+    m_guitar.A()
+        .onTrue(Commands.runOnce(() -> Logger.recordOutput("Guitar/A", true)))
+        .onFalse(Commands.runOnce(() -> Logger.recordOutput("Guitar/A", false)));
+
+    m_guitar.D()
+        .onTrue(Commands.runOnce(() -> Logger.recordOutput("Guitar/D", true)))
+        .onFalse(Commands.runOnce(() -> Logger.recordOutput("Guitar/D", false)));
+
+    m_guitar.G()
+        .onTrue(Commands.runOnce(() -> Logger.recordOutput("Guitar/G", true)))
+        .onFalse(Commands.runOnce(() -> Logger.recordOutput("Guitar/G", false)));
+
+    m_guitar.B()
+        .onTrue(Commands.runOnce(() -> Logger.recordOutput("Guitar/B", true)))
+        .onFalse(Commands.runOnce(() -> Logger.recordOutput("Guitar/B", false)));
+
+    m_guitar.E()
+        .onTrue(Commands.runOnce(() -> Logger.recordOutput("Guitar/highE", true)))
+        .onFalse(Commands.runOnce(() -> Logger.recordOutput("Guitar/highE", false)));
 
     NamedCommands.registerCommand(
         "ShootAll", shootCmd.get().alongWith(m_swerve.aimShoot()).repeatedly());

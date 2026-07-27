@@ -62,7 +62,7 @@ public class PoseCameraIOPhoton implements PoseCameraIO {
     return new ArrayList<VisionData>(
         m_camera.getAllUnreadResults().stream()
             .filter(PhotonPipelineResult::hasTargets)
-            .filter(result -> result.getBestTarget().poseAmbiguity > 0.3)
+            // .filter(result -> result.getBestTarget().poseAmbiguity > 0.3)
             .map(
                 (result) -> {
 
@@ -70,7 +70,7 @@ public class PoseCameraIOPhoton implements PoseCameraIO {
                   var est = estimator.estimateCoprocMultiTagPose(result);
                   // Because we trust this estimate so much we can reset our rotation to it
                   // Often, the gyro will drift significantly, this corrects it
-                  if (est.isPresent() && result.getBestTarget().poseAmbiguity > 0.5) {
+                  if (est.isPresent() && result.getBestTarget().poseAmbiguity < 0.5) {
                     if (m_gyroResetter.isPresent())
                       m_gyroResetter.get().accept(est.get().estimatedPose.getRotation());
                     return est;
@@ -97,32 +97,6 @@ public class PoseCameraIOPhoton implements PoseCameraIO {
                 })
             .filter(Optional::isPresent)
             .map(Optional::get)
-            // Filter frivolous pose estimates
-            // .filter(
-            //     result -> {
-            //       var speeds = RobotState.getLastMeasuredSpeeds();
-            //       var dist =
-            //           result
-            //               .estimatedPose
-            //               .getTranslation()
-            //               .getDistance(RobotState.getPoseEst().getTranslation());
-            //       return dist
-            //           < Math.hypot(speeds.vxMetersPerSecond, speeds.vyMetersPerSecond)
-            //               * Configs.Vision.ScalarPositionTolerance;
-            //     })
-            // Filter frivolous rotations
-            .filter(
-                result -> {
-                  var velocity = RobotState.getLastMeasuredSpeeds().omegaRadiansPerSecond;
-                  var delta =
-                      Math.abs(
-                          result
-                              .estimatedPose
-                              .getRotation()
-                              .minus(RobotState.getPoseEst().getRotation())
-                              .getAngle());
-                  return delta < Math.abs(velocity) * Configs.Vision.ScalarRotationTolerance;
-                })
             .map(
                 est -> {
                   var targets = est.targetsUsed.stream().mapToInt((target) -> target.fiducialId);

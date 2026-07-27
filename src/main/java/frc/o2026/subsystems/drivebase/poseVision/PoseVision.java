@@ -73,6 +73,8 @@ public class PoseVision extends SubsystemBase {
         "Vision/seenTargets",
         m_cameras.stream()
             .map(PoseCameraIO::getLastSeenTags)
+            .filter(poses -> poses != null)
+            .filter(poses -> !poses.isEmpty())
             .flatMap(poses -> poses.stream())
             .toList()
             .toArray(Pose2d[]::new));

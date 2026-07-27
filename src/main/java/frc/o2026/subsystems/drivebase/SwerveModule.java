@@ -51,6 +51,8 @@ public class SwerveModule {
 
   public void setDesiredState(SwerveModuleState desiredState) {
 
+    // desiredState.optimize(Rotation2d.fromRotations(m_angleMotor.getPos().in(Rotations)));
+
     m_drivingMotor.setVelocity(
         RotationsPerSecond.of(
             desiredState.speedMetersPerSecond / Constants.Chassis.DriveMotorConversion));
@@ -61,9 +63,9 @@ public class SwerveModule {
     //   m_angleMotor.brake();
     // }
 
-    // if (desiredState.speedMetersPerSecond == 0.0) {
-    //   m_drivingMotor.brake();
-    // }
+    if (desiredState.speedMetersPerSecond == 0.0) {
+      m_drivingMotor.brake();
+    }
   }
 
   public SwerveModuleState getState() {

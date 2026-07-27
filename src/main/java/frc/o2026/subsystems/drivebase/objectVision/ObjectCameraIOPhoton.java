@@ -19,6 +19,7 @@ import frc.o2026.subsystems.drivebase.objectVision.ObjectVision.ObjectTargetData
 import java.util.HashSet;
 import java.util.Optional;
 import java.util.Set;
+import org.littletonrobotics.junction.Logger;
 import org.photonvision.PhotonCamera;
 import org.photonvision.PhotonUtils;
 import org.photonvision.targeting.PhotonPipelineResult;
@@ -65,7 +66,6 @@ public class ObjectCameraIOPhoton implements ObjectCameraIO {
                 rangeMeters * yaw.getSin(),
                 (FieldConstants.fuelDiameter / 2.0) - m_config.offset().getTranslation().getZ());
 
-        // Compose: robot-to-camera ∘ camera-to-target = robot-to-target
         Translation3d robotToTarget =
             cameraToTarget
                 .rotateBy(m_config.offset().getRotation())
@@ -88,6 +88,7 @@ public class ObjectCameraIOPhoton implements ObjectCameraIO {
     if (objectResult != null) {
       if (objectResult.hasTargets()) {
 
+        Logger.recordOutput("odYaw", objectResult.getBestTarget().getYaw());
         return Optional.of(Degrees.of(objectResult.getBestTarget().getYaw()));
       }
     }

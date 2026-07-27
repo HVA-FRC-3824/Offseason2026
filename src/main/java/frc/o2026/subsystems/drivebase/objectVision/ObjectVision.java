@@ -40,10 +40,7 @@ public class ObjectVision extends SubsystemBase {
                     object
                         .translation()
                         .toTranslation2d()
-                        .rotateBy(
-                            RobotState.getPoseEst()
-                                .toPose2d()
-                                .getRotation()) // was incorrectly negated before
+                        .rotateBy(RobotState.getPoseEst().toPose2d().getRotation())
                         .plus(RobotState.getPoseEst().toPose2d().getTranslation()))
             .toList();
 
@@ -72,7 +69,6 @@ public class ObjectVision extends SubsystemBase {
 
     if (poses.isEmpty()) return Optional.empty();
 
-    // Compare distance to the robot's position, not the field origin.
     return poses.stream()
         .min(
             Comparator.comparingDouble(
