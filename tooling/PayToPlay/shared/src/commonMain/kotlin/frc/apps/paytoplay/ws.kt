@@ -5,53 +5,144 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.wannaverse.websockets.WebSocketManager
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlin.time.Clock
+import kotlin.time.Duration.Companion.milliseconds
+
+enum class ConnectionStatus {
+    DISCONNECTED,
+    CONNECTING,
+    CONNECTED,
+    ERROR
+}
 
 class ws : ViewModel() {
 
-    // --- CONNECTION OPTIONS ---
-    // Option A (ADB over USB — recommended): run `adb reverse tcp:5000 tcp:5000` once in a
-    // terminal, then localhost on the phone tunnels to your PC via the USB cable.
-    //
-    // Option B (WiFi): replace with your PC's LAN IP, e.g. "ws://192.168.1.42:5000"
-    // Find it by running `ipconfig` and looking for your Wi-Fi adapter's IPv4 address.
     val websocketURL = mutableStateOf("ws://localhost:5000")
 
+    private var wsManager: WebSocketManager? = null
 
-    private var wsManager: WebSocketManager = WebSocketManager(websocketURL.value)
-
-    var isLoading = mutableStateOf(false)
-    var connected = mutableStateOf(false)
+    val connectionStatus = mutableStateOf(ConnectionStatus.DISCONNECTED)
+    val lastError = mutableStateOf<String?>(null)
+    val lastHeartbeatMs = mutableStateOf<Long>(0)
     val messages = mutableStateListOf<String>()
 
-    fun connectToServer() = viewModelScope.launch {
-        isLoading.value = true
+    private var autoReconnectJob: Job? = null
+    private var incomingJob: Job? = null
 
-        wsManager.connect()
-        wsManager.incomingMessages.onEach { message ->
-            println("Received: $message")
-        }.launchIn(CoroutineScope(Dispatchers.Default))
-        isLoading.value = false
-        connected.value = true
+    fun updateUrl(newUrl: String) {
+        if (websocketURL.value != newUrl) {
+            websocketURL.value = newUrl
+            if (connectionStatus.value == ConnectionStatus.CONNECTED) {
+                disconnect()
+            }
+        }
     }
 
-    fun sendMessage(message: String) {
-        messages.add("Client: $message")
-        wsManager.send(message)
+    fun connectToServer() = viewModelScope.launch {
+        if (connectionStatus.value == ConnectionStatus.CONNECTING || connectionStatus.value == ConnectionStatus.CONNECTED) {
+            return@launch
+        }
+
+        connectionStatus.value = ConnectionStatus.CONNECTING
+        lastError.value = null
+
+        try {
+            val manager = WebSocketManager(websocketURL.value)
+            wsManager = manager
+
+            manager.connect()
+
+            incomingJob?.cancel()
+            incomingJob = manager.incomingMessages
+                .onEach { message ->
+                    println("Received: $message")
+                    messages.add(0, "Server: $message")
+                    lastHeartbeatMs.value = Clock.System.now().toEpochMilliseconds()
+                }
+                .catch { e ->
+                    println("WebSocket error: ${e.message}")
+                    connectionStatus.value = ConnectionStatus.ERROR
+                    lastError.value = e.message ?: "Stream error"
+                }
+                .launchIn(viewModelScope)
+
+            connectionStatus.value = ConnectionStatus.CONNECTED
+            lastError.value = null
+        } catch (e: Throwable) {
+            println("WebSocket connection error: ${e.message}")
+            connectionStatus.value = ConnectionStatus.ERROR
+            lastError.value = e.message ?: "Failed to connect to ${websocketURL.value}"
+            try {
+                wsManager?.disconnect()
+            } catch (_: Throwable) {}
+        }
+    }
+
+    fun sendMessage(message: String): Boolean {
+        return try {
+            if (connectionStatus.value != ConnectionStatus.CONNECTED || wsManager == null) {
+                messages.add(0, "Error: Failed to send - Not connected")
+                return false
+            }
+            messages.add(0, "Client: $message")
+            wsManager?.send(message)
+            true
+        } catch (e: Throwable) {
+            connectionStatus.value = ConnectionStatus.ERROR
+            lastError.value = e.message ?: "Failed to send message"
+            messages.add(0, "Error sending: ${e.message}")
+            false
+        }
+    }
+
+    fun startAutoReconnect() {
+        if (autoReconnectJob?.isActive == true) return
+        autoReconnectJob = viewModelScope.launch {
+            while (isActive) {
+                if (connectionStatus.value != ConnectionStatus.CONNECTED && connectionStatus.value != ConnectionStatus.CONNECTING) {
+                    connectToServer()
+                }
+                delay(3000.milliseconds)
+            }
+        }
+    }
+
+    fun stopAutoReconnect() {
+        autoReconnectJob?.cancel()
+        autoReconnectJob = null
     }
 
     fun disconnect() {
-        connected.value = false
-        wsManager.disconnect()
+        stopAutoReconnect()
+        try {
+            wsManager?.disconnect()
+        } catch (_: Throwable) {}
+        connectionStatus.value = ConnectionStatus.DISCONNECTED
+    }
+
+    fun clearLog() {
+        messages.clear()
+    }
+
+    fun isConnected(): Boolean {
+
+        if (lastHeartbeatMs.value > 200) connectionStatus.value = ConnectionStatus.DISCONNECTED
+
+        return connectionStatus.value == ConnectionStatus.CONNECTED
     }
 
     override fun onCleared() {
-        connected.value = false
+        disconnect()
+        try {
+            wsManager?.clear()
+        } catch (_: Throwable) {}
         super.onCleared()
-        wsManager.clear()
     }
 }
