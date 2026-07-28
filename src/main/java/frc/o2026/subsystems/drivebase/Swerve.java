@@ -53,7 +53,7 @@ public class Swerve extends SubsystemBase {
 
   private PIDController m_xController = new PIDController(2, 0, 0);
   private PIDController m_yController = new PIDController(2, 0, 0);
-  private PIDController m_rotController = new PIDController(3, 0.05, 0.3);
+  private PIDController m_rotController = new PIDController(4, 0.0, 0.5);
 
   public Swerve(SwerveIO io, ObjectCameraIO odIo) {
 
@@ -271,9 +271,35 @@ public class Swerve extends SubsystemBase {
         .withName("AimSOTM");
   }
 
-  public Command aim(Supplier<Rotation2d> angleSupplier) {
+  public Command aim(Rotation2d angle) {
 
-    return aimMove(ChassisSpeeds::new, () -> Optional.of(angleSupplier.get()), false)
+    return run(() -> {
+          drive(
+              new ChassisSpeeds(
+                  0.0,
+                  0.0,
+                  m_rotController.calculate(
+                      m_io.getGyroHeading().getRadians(), angle.getRadians())),
+              false);
+        })
+        .until(() -> m_rotController.atSetpoint())
+        .andThen(runOnce(() -> drive(new ChassisSpeeds(), m_fieldCentricity)))
+        .withName("Aim");
+  }
+
+  public Command aim(Supplier<Rotation2d> angle) {
+
+    return run(() -> {
+          drive(
+              new ChassisSpeeds(
+                  0.0,
+                  0.0,
+                  m_rotController.calculate(
+                      m_io.getGyroHeading().getRadians(), angle.get().getRadians())),
+              false);
+        })
+        .until(() -> m_rotController.atSetpoint())
+        .andThen(runOnce(() -> drive(new ChassisSpeeds(), m_fieldCentricity)))
         .withName("Aim");
   }
 

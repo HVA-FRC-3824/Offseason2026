@@ -294,5 +294,6 @@ public final class Constants {
     public static final int DrivePort = 0;
     public static final int OperatorPort = 1;
     public static final int GuitarPort = 2;
+    public static final int CreditPort = 3;
   }
 }

@@ -19,6 +19,7 @@ import frc.o2026.RobotState;
 import frc.o2026.subsystems.drivebase.poseVision.PoseVision.VisionData;
 import java.util.ArrayList;
 import java.util.List;
+import org.littletonrobotics.junction.Logger;
 
 public class PoseCameraIOLimelight implements PoseCameraIO {
 
@@ -59,11 +60,15 @@ public class PoseCameraIOLimelight implements PoseCameraIO {
 
     // Filter out frivolous readings
     if (mt2 == null) return new ArrayList<>();
-    if (mt2.pose.getX() < 1e-4 && mt2.pose.getY() < 1e-4) return new ArrayList<>();
+    if (mt2.pose.equals(new Pose2d())) return new ArrayList<>();
 
     var tags = List.of(mt2.rawFiducials).stream().mapToInt((tag) -> tag.id).boxed().toList();
 
     m_lastSeenTags = tags.stream().map(PoseCameraIO::getTagPose).map(Pose3d::toPose2d).toList();
+
+    Logger.recordOutput("Vision/" + m_config.name() + "/lastMeasurement", mt2.timestampSeconds);
+
+    Logger.recordOutput("Vision/" + m_config.name() + "/est", mt2.pose);
 
     var tagArr = tags.stream().mapToInt(x -> x).toArray();
     var measurements = new ArrayList<VisionData>(1);

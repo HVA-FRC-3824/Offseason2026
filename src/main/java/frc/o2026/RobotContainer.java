@@ -22,10 +22,13 @@ import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
+import edu.wpi.first.wpilibj2.command.WaitCommand;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import frc.lib.Alliance;
 import frc.lib.GuitarController;
+import frc.lib.NONBenevolentSalesman;
 import frc.lib.hardware.gyro.GyroIOPigeon;
+import frc.lib.hardware.motor.MotorIONothing;
 import frc.lib.hardware.motor.ctre.FlywheelSimIO;
 import frc.lib.hardware.motor.ctre.MotorSimIO;
 import frc.lib.hardware.motor.ctre.TalonIO;
@@ -41,102 +44,33 @@ import frc.o2026.subsystems.drivebase.poseVision.PoseCameraIOLimelight;
 import frc.o2026.subsystems.drivebase.poseVision.PoseCameraIOPhoton;
 import frc.o2026.subsystems.drivebase.poseVision.PoseCameraIOSim;
 import frc.o2026.subsystems.roller.Roller;
+import frc.o2026.subsystems.roller.RollerIONothing;
 import frc.o2026.subsystems.roller.RollerIOSim;
 import frc.o2026.subsystems.roller.RollerIOTalonFX;
 import java.util.function.Supplier;
-import org.littletonrobotics.junction.Logger;
 
 public class RobotContainer extends SubsystemBase {
 
-  private Swerve m_swerve =
-      new Swerve(
-          RobotBase.isReal()
-              ? new SwerveIOReal(
-                  new GyroIOPigeon(Constants.CanIds.PigeonGyroId),
-                  new PoseCameraIOPhoton(Constants.Vision.FrontCamConfig),
-                  new PoseCameraIOPhoton(Constants.Vision.WebCam),
-                  new PoseCameraIOLimelight(Constants.Vision.LimelightOfDoomAndDespair))
-              : new SwerveIOSim(
-                  new PoseCameraIOSim(Constants.Vision.FrontCamConfig),
-                  new PoseCameraIOSim(Constants.Vision.WebCam),
-                  new PoseCameraIOSim(Constants.Vision.LimelightOfDoomAndDespair)),
-          RobotBase.isReal()
-              ? new ObjectCameraIOPhoton(Constants.Vision.BackCamConfig)
-              : new ObjectCameraIOSim(Constants.Vision.BackCamConfig));
+  private Swerve m_swerve;
+  private Roller m_roller;
+  private Indexer m_indexer;
+  private Intake m_intake;
+  private Flywheel m_flywheel;
 
-  private Roller m_roller =
-      new Roller(RobotBase.isReal() ? new RollerIOTalonFX() : new RollerIOSim());
+  private static enum Robot {
+    Real,
+    DevBot,
+    Sim
+  }
 
-  private Indexer m_indexer =
-      new Indexer(
-          RobotBase.isReal()
-              ? new TalonIO(Constants.CanIds.IndexerMotorId, Configs.Indexer.BeltConfig)
-              : new MotorSimIO(
-                  Constants.CanIds.IndexerMotorId,
-                  Configs.Indexer.BeltConfig,
-                  true,
-                  DCMotor.getKrakenX60(1),
-                  Constants.SimModels.IndexerMOI,
-                  Constants.SimModels.IndexerGearRatio),
-          RobotBase.isReal()
-              ? new TalonIO(Constants.CanIds.KickerMotorId, Configs.Indexer.KickerConfig)
-              : new MotorSimIO(
-                  Constants.CanIds.KickerMotorId,
-                  Configs.Indexer.KickerConfig,
-                  true,
-                  DCMotor.getKrakenX60(1),
-                  Constants.SimModels.IndexerMOI,
-                  Constants.SimModels.IndexerGearRatio));
-
-  private Intake m_intake =
-      new Intake(
-          RobotBase.isReal()
-              ? new TalonIO(
-                  Constants.CanIds.IntakePositionLeaderMotorId, Configs.Intake.PivotConfig)
-              : new MotorSimIO(
-                  Constants.CanIds.IntakePositionLeaderMotorId,
-                  Configs.Intake.PivotConfig,
-                  true,
-                  DCMotor.getKrakenX60(2),
-                  Constants.SimModels.IntakeMOI,
-                  Constants.SimModels.IntakeGearRatio),
-          RobotBase.isReal()
-              ? new TalonIO(
-                  Constants.CanIds.IntakePositionFollowerMotorId,
-                  Configs.Intake.PivotConfig.withInverted(false))
-              : new MotorSimIO(
-                  Constants.CanIds.IntakePositionFollowerMotorId,
-                  Configs.Intake.PivotConfig,
-                  true,
-                  DCMotor.getKrakenX60(2),
-                  Constants.SimModels.IntakeMOI,
-                  Constants.SimModels.IntakeGearRatio));
-
-  private Flywheel m_flywheel =
-      new Flywheel(
-          RobotBase.isReal()
-              ? new TalonIO(Constants.CanIds.FlywheelMotorId, Configs.Flywheel.Config)
-              : new FlywheelSimIO(
-                  Constants.CanIds.FlywheelMotorId,
-                  Configs.Flywheel.Config,
-                  true,
-                  DCMotor.getKrakenX60(2),
-                  Constants.SimModels.FlywheelMOI,
-                  Constants.SimModels.FlywheelGearRatio),
-          RobotBase.isReal()
-              ? new TalonIO(Constants.CanIds.FlywheelFollowerMotorId, Configs.Flywheel.Config)
-              : new FlywheelSimIO(
-                  Constants.CanIds.FlywheelFollowerMotorId,
-                  Configs.Flywheel.Config,
-                  true,
-                  DCMotor.getKrakenX60(2),
-                  Constants.SimModels.FlywheelMOI,
-                  Constants.SimModels.FlywheelGearRatio));
+  private static Robot m_impl = Robot.DevBot;
 
   private CommandXboxController m_driver = new CommandXboxController(Constants.Usb.DrivePort);
   //   private CommandXboxController m_operator = new
   // CommandXboxController(Constants.Usb.OperatorPort);
   private GuitarController m_guitar = new GuitarController(Constants.Usb.GuitarPort);
+  private NONBenevolentSalesman m_creditOrDebit =
+      new NONBenevolentSalesman(Constants.Usb.CreditPort);
 
   private SlewRateLimiter m_xLimiter = new SlewRateLimiter(2.0);
   private SlewRateLimiter m_yLimiter = new SlewRateLimiter(2.0);
@@ -174,6 +108,131 @@ public class RobotContainer extends SubsystemBase {
 
   public RobotContainer() {
 
+    switch (m_impl) {
+      case Real:
+        m_swerve =
+            new Swerve(
+                new SwerveIOReal(
+                    new GyroIOPigeon(Constants.CanIds.PigeonGyroId),
+                    new PoseCameraIOPhoton(Constants.Vision.FrontCamConfig),
+                    new PoseCameraIOPhoton(Constants.Vision.WebCam),
+                    new PoseCameraIOLimelight(Constants.Vision.LimelightOfDoomAndDespair)),
+                new ObjectCameraIOPhoton(Constants.Vision.BackCamConfig));
+
+        m_roller = new Roller(new RollerIOTalonFX());
+
+        m_indexer =
+            new Indexer(
+                new TalonIO(Constants.CanIds.IndexerMotorId, Configs.Indexer.BeltConfig),
+                new TalonIO(Constants.CanIds.KickerMotorId, Configs.Indexer.KickerConfig));
+
+        m_intake =
+            new Intake(
+                new TalonIO(
+                    Constants.CanIds.IntakePositionLeaderMotorId, Configs.Intake.PivotConfig),
+                new TalonIO(
+                    Constants.CanIds.IntakePositionFollowerMotorId,
+                    Configs.Intake.PivotConfig.withInverted(false)));
+
+        m_flywheel =
+            new Flywheel(
+                new TalonIO(Constants.CanIds.FlywheelMotorId, Configs.Flywheel.Config),
+                new TalonIO(Constants.CanIds.FlywheelFollowerMotorId, Configs.Flywheel.Config));
+        break;
+
+      case DevBot:
+        m_swerve =
+            new Swerve(
+                RobotBase.isReal()
+                    ? new SwerveIOReal(
+                        new GyroIOPigeon(Constants.CanIds.PigeonGyroId),
+                        new PoseCameraIOPhoton(Constants.Vision.FrontCamConfig),
+                        new PoseCameraIOPhoton(Constants.Vision.WebCam),
+                        new PoseCameraIOLimelight(Constants.Vision.LimelightOfDoomAndDespair))
+                    : new SwerveIOSim(
+                        new PoseCameraIOSim(Constants.Vision.FrontCamConfig),
+                        new PoseCameraIOSim(Constants.Vision.WebCam),
+                        new PoseCameraIOSim(Constants.Vision.LimelightOfDoomAndDespair)),
+                RobotBase.isReal()
+                    ? new ObjectCameraIOPhoton(Constants.Vision.BackCamConfig)
+                    : new ObjectCameraIOSim(Constants.Vision.BackCamConfig));
+
+        m_roller = new Roller(new RollerIONothing());
+
+        m_indexer = new Indexer(new MotorIONothing(), new MotorIONothing());
+
+        m_intake = new Intake(new MotorIONothing(), new MotorIONothing());
+
+        m_flywheel = new Flywheel(new MotorIONothing(), new MotorIONothing());
+        break;
+
+      case Sim:
+        m_swerve =
+            new Swerve(
+                new SwerveIOSim(
+                    new PoseCameraIOSim(Constants.Vision.FrontCamConfig),
+                    new PoseCameraIOSim(Constants.Vision.WebCam),
+                    new PoseCameraIOSim(Constants.Vision.LimelightOfDoomAndDespair)),
+                new ObjectCameraIOSim(Constants.Vision.BackCamConfig));
+
+        m_roller = new Roller(new RollerIOSim());
+
+        m_indexer =
+            new Indexer(
+                new MotorSimIO(
+                    Constants.CanIds.IndexerMotorId,
+                    Configs.Indexer.BeltConfig,
+                    true,
+                    DCMotor.getKrakenX60(1),
+                    Constants.SimModels.IndexerMOI,
+                    Constants.SimModels.IndexerGearRatio),
+                new MotorSimIO(
+                    Constants.CanIds.KickerMotorId,
+                    Configs.Indexer.KickerConfig,
+                    true,
+                    DCMotor.getKrakenX60(1),
+                    Constants.SimModels.IndexerMOI,
+                    Constants.SimModels.IndexerGearRatio));
+
+        m_intake =
+            new Intake(
+                new MotorSimIO(
+                    Constants.CanIds.IntakePositionLeaderMotorId,
+                    Configs.Intake.PivotConfig,
+                    true,
+                    DCMotor.getKrakenX60(2),
+                    Constants.SimModels.IntakeMOI,
+                    Constants.SimModels.IntakeGearRatio),
+                new MotorSimIO(
+                    Constants.CanIds.IntakePositionFollowerMotorId,
+                    Configs.Intake.PivotConfig,
+                    true,
+                    DCMotor.getKrakenX60(2),
+                    Constants.SimModels.IntakeMOI,
+                    Constants.SimModels.IntakeGearRatio));
+
+        // Both sims use 2 motors to simulate the effects of the other motor
+        m_flywheel =
+            new Flywheel(
+                new FlywheelSimIO(
+                    Constants.CanIds.FlywheelMotorId,
+                    Configs.Flywheel.Config,
+                    true,
+                    DCMotor.getKrakenX60(2),
+                    Constants.SimModels.FlywheelMOI,
+                    Constants.SimModels.FlywheelGearRatio),
+                new FlywheelSimIO(
+                    Constants.CanIds.FlywheelFollowerMotorId,
+                    Configs.Flywheel.Config,
+                    true,
+                    DCMotor.getKrakenX60(2),
+                    Constants.SimModels.FlywheelMOI,
+                    Constants.SimModels.FlywheelGearRatio));
+        break;
+    }
+
+    // AUTOS
+
     m_autoChooser = AutoBuilder.buildAutoChooser();
     m_autoChooser.addOption(
         "Custom",
@@ -196,10 +255,14 @@ public class RobotContainer extends SubsystemBase {
             .andThen(m_indexer.off()));
     SmartDashboard.putData("Auto Chooser", m_autoChooser);
 
+    // DEFAULT COMMANDS
+
     m_swerve.setDefaultCommand(m_swerve.drive(this::getSpeeds));
     m_flywheel.setDefaultCommand(m_flywheel.off());
     m_indexer.setDefaultCommand(m_indexer.off());
     m_roller.setDefaultCommand(m_roller.off());
+
+    // CONTROLLER BINDINGS
 
     m_driver.a().onTrue(m_swerve.resetGyro());
     m_driver.b().onTrue(m_swerve.toggleXMode());
@@ -227,32 +290,23 @@ public class RobotContainer extends SubsystemBase {
     SmartDashboard.putData(
         "rotRight", m_swerve.drive(() -> new ChassisSpeeds(0.0, 0.0, -Math.PI / 2), true));
 
-    // m_guitar.lowE().debounce(0.5).onTrue(m_swerve.crossTrench());
-    // m_guitar.A().debounce(0.5).onTrue(m_swerve.drive(() -> new ChassisSpeeds(-0.5, 0.0, 0.0)));
-    // m_guitar.D().debounce(0.5).onTrue(m_swerve.drive(() -> new ChassisSpeeds(0.5, 0.0, 0.0)));
-    // m_guitar.G().debounce(0.5).onTrue(m_swerve.drive(() -> new ChassisSpeeds(0.0, -0.5, 0.0)));
-    // m_guitar.B().debounce(0.5).onTrue(m_swerve.drive(() -> new ChassisSpeeds(0.0, 0.5, 0.0)));
-    // m_guitar.highE().debounce(0.5).onTrue(m_swerve.crossTrench());
+    m_guitar.A().onTrue(m_swerve.drive(() -> new ChassisSpeeds(-0.5, 0.0, 0.0)));
+    m_guitar.D().onTrue(m_swerve.drive(() -> new ChassisSpeeds(0.5, 0.0, 0.0)));
+    m_guitar.G().onTrue(m_swerve.drive(() -> new ChassisSpeeds(0.0, -0.5, 0.0)));
+    m_guitar.B().onTrue(m_swerve.drive(() -> new ChassisSpeeds(0.0, 0.5, 0.0)));
+    m_guitar.E().onTrue(m_swerve.crossTrench());
 
-    m_guitar.A()
-        .onTrue(Commands.runOnce(() -> Logger.recordOutput("Guitar/A", true)))
-        .onFalse(Commands.runOnce(() -> Logger.recordOutput("Guitar/A", false)));
+    m_creditOrDebit
+        .swipe()
+        .onTrue(
+            m_swerve.defer(
+                () -> {
+                  return Commands.race(
+                      m_swerve.aim(m_swerve.getHeading().plus(Rotation2d.k180deg)).repeatedly(),
+                      new WaitCommand(10));
+                }));
 
-    m_guitar.D()
-        .onTrue(Commands.runOnce(() -> Logger.recordOutput("Guitar/D", true)))
-        .onFalse(Commands.runOnce(() -> Logger.recordOutput("Guitar/D", false)));
-
-    m_guitar.G()
-        .onTrue(Commands.runOnce(() -> Logger.recordOutput("Guitar/G", true)))
-        .onFalse(Commands.runOnce(() -> Logger.recordOutput("Guitar/G", false)));
-
-    m_guitar.B()
-        .onTrue(Commands.runOnce(() -> Logger.recordOutput("Guitar/B", true)))
-        .onFalse(Commands.runOnce(() -> Logger.recordOutput("Guitar/B", false)));
-
-    m_guitar.E()
-        .onTrue(Commands.runOnce(() -> Logger.recordOutput("Guitar/highE", true)))
-        .onFalse(Commands.runOnce(() -> Logger.recordOutput("Guitar/highE", false)));
+    // PATHING COMMANDS & TRIGGERS
 
     NamedCommands.registerCommand(
         "ShootAll", shootCmd.get().alongWith(m_swerve.aimShoot()).repeatedly());
