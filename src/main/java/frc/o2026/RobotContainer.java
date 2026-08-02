@@ -29,9 +29,9 @@ import frc.lib.GuitarController;
 import frc.lib.NONBenevolentSalesman;
 import frc.lib.hardware.gyro.GyroIOPigeon;
 import frc.lib.hardware.motor.MotorIONothing;
-import frc.lib.hardware.motor.ctre.FlywheelSimIO;
-import frc.lib.hardware.motor.ctre.MotorSimIO;
-import frc.lib.hardware.motor.ctre.TalonIO;
+import frc.lib.hardware.motor.ctre.MotorIOFlywheelSim;
+import frc.lib.hardware.motor.ctre.MotorIOSim;
+import frc.lib.hardware.motor.ctre.MotorIOTalonFX;
 import frc.o2026.subsystems.Flywheel;
 import frc.o2026.subsystems.Indexer;
 import frc.o2026.subsystems.Intake;
@@ -44,6 +44,7 @@ import frc.o2026.subsystems.drivebase.poseVision.PoseCameraIOLimelight;
 import frc.o2026.subsystems.drivebase.poseVision.PoseCameraIOPhoton;
 import frc.o2026.subsystems.drivebase.poseVision.PoseCameraIOSim;
 import frc.o2026.subsystems.roller.Roller;
+import frc.o2026.subsystems.roller.Roller.RollerDesiredState;
 import frc.o2026.subsystems.roller.RollerIONothing;
 import frc.o2026.subsystems.roller.RollerIOSim;
 import frc.o2026.subsystems.roller.RollerIOTalonFX;
@@ -96,7 +97,7 @@ public class RobotContainer extends SubsystemBase {
       () ->
           Commands.parallel(
                   m_intake.deploy(),
-                  m_roller.on(),
+                  m_roller.setState(RollerDesiredState.on),
                   m_swerve
                       .autoIntake()
                       .andThen(
@@ -104,7 +105,8 @@ public class RobotContainer extends SubsystemBase {
                       .until(m_swerve::hasObjects)
                       .repeatedly())
               .withTimeout(3)
-              .andThen(Commands.sequence(m_roller.off(), m_intake.stowed()));
+              .andThen(
+                  Commands.sequence(m_roller.setState(RollerDesiredState.off), m_intake.stowed()));
 
   public RobotContainer() {
 
@@ -123,21 +125,22 @@ public class RobotContainer extends SubsystemBase {
 
         m_indexer =
             new Indexer(
-                new TalonIO(Constants.CanIds.IndexerMotorId, Configs.Indexer.BeltConfig),
-                new TalonIO(Constants.CanIds.KickerMotorId, Configs.Indexer.KickerConfig));
+                new MotorIOTalonFX(Constants.CanIds.IndexerMotorId, Configs.Indexer.BeltConfig),
+                new MotorIOTalonFX(Constants.CanIds.KickerMotorId, Configs.Indexer.KickerConfig));
 
         m_intake =
             new Intake(
-                new TalonIO(
+                new MotorIOTalonFX(
                     Constants.CanIds.IntakePositionLeaderMotorId, Configs.Intake.PivotConfig),
-                new TalonIO(
+                new MotorIOTalonFX(
                     Constants.CanIds.IntakePositionFollowerMotorId,
                     Configs.Intake.PivotConfig.withInverted(false)));
 
         m_flywheel =
             new Flywheel(
-                new TalonIO(Constants.CanIds.FlywheelMotorId, Configs.Flywheel.Config),
-                new TalonIO(Constants.CanIds.FlywheelFollowerMotorId, Configs.Flywheel.Config));
+                new MotorIOTalonFX(Constants.CanIds.FlywheelMotorId, Configs.Flywheel.Config),
+                new MotorIOTalonFX(
+                    Constants.CanIds.FlywheelFollowerMotorId, Configs.Flywheel.Config));
         break;
 
       case DevBot:
@@ -179,14 +182,14 @@ public class RobotContainer extends SubsystemBase {
 
         m_indexer =
             new Indexer(
-                new MotorSimIO(
+                new MotorIOSim(
                     Constants.CanIds.IndexerMotorId,
                     Configs.Indexer.BeltConfig,
                     true,
                     DCMotor.getKrakenX60(1),
                     Constants.SimModels.IndexerMOI,
                     Constants.SimModels.IndexerGearRatio),
-                new MotorSimIO(
+                new MotorIOSim(
                     Constants.CanIds.KickerMotorId,
                     Configs.Indexer.KickerConfig,
                     true,
@@ -196,14 +199,14 @@ public class RobotContainer extends SubsystemBase {
 
         m_intake =
             new Intake(
-                new MotorSimIO(
+                new MotorIOSim(
                     Constants.CanIds.IntakePositionLeaderMotorId,
                     Configs.Intake.PivotConfig,
                     true,
                     DCMotor.getKrakenX60(2),
                     Constants.SimModels.IntakeMOI,
                     Constants.SimModels.IntakeGearRatio),
-                new MotorSimIO(
+                new MotorIOSim(
                     Constants.CanIds.IntakePositionFollowerMotorId,
                     Configs.Intake.PivotConfig,
                     true,
@@ -214,14 +217,14 @@ public class RobotContainer extends SubsystemBase {
         // Both sims use 2 motors to simulate the effects of the other motor
         m_flywheel =
             new Flywheel(
-                new FlywheelSimIO(
+                new MotorIOFlywheelSim(
                     Constants.CanIds.FlywheelMotorId,
                     Configs.Flywheel.Config,
                     true,
                     DCMotor.getKrakenX60(2),
                     Constants.SimModels.FlywheelMOI,
                     Constants.SimModels.FlywheelGearRatio),
-                new FlywheelSimIO(
+                new MotorIOFlywheelSim(
                     Constants.CanIds.FlywheelFollowerMotorId,
                     Configs.Flywheel.Config,
                     true,
@@ -260,12 +263,11 @@ public class RobotContainer extends SubsystemBase {
     m_swerve.setDefaultCommand(m_swerve.drive(this::getSpeeds));
     m_flywheel.setDefaultCommand(m_flywheel.off());
     m_indexer.setDefaultCommand(m_indexer.off());
-    m_roller.setDefaultCommand(m_roller.off());
+    m_roller.setDefaultCommand(m_roller.setState(RollerDesiredState.off));
 
     // CONTROLLER BINDINGS
 
     m_driver.a().onTrue(m_swerve.resetGyro());
-    m_driver.b().onTrue(m_swerve.toggleXMode());
     m_driver.y().onTrue(m_swerve.toggleFieldCentricity());
 
     m_driver.rightTrigger().whileTrue(shootCmd.get().alongWith(m_swerve.aimSOTM(this::getSpeeds)));
@@ -274,7 +276,9 @@ public class RobotContainer extends SubsystemBase {
         .leftTrigger()
         .whileTrue(
             Commands.parallel(
-                m_intake.deploy(), m_roller.on(), m_swerve.targetAssistedDrive(this::getSpeeds)));
+                m_intake.deploy(),
+                m_roller.setState(RollerDesiredState.on),
+                m_swerve.targetAssistedDrive(this::getSpeeds)));
 
     SmartDashboard.putData("Auto Intake", autoIntakeCmd.get());
     SmartDashboard.putData("Cross Trench", m_swerve.crossTrench());
@@ -312,7 +316,8 @@ public class RobotContainer extends SubsystemBase {
         "ShootAll", shootCmd.get().alongWith(m_swerve.aimShoot()).repeatedly());
     NamedCommands.registerCommand("AutoIntake", autoIntakeCmd.get());
 
-    new EventTrigger("DeployIntake").onTrue(m_intake.deploy().andThen(m_roller.on()));
+    new EventTrigger("DeployIntake")
+        .onTrue(m_intake.deploy().andThen(m_roller.setState(RollerDesiredState.on)));
     new EventTrigger("StowIntake").onTrue(m_intake.stowed());
   }
 

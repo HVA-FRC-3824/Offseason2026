@@ -17,6 +17,7 @@ import edu.wpi.first.math.numbers.N1;
 import edu.wpi.first.math.numbers.N4;
 import edu.wpi.first.wpilibj.Timer;
 import frc.lib.hardware.vision.VisionConfig;
+import frc.lib.rebuilt.FieldConstants;
 import frc.o2026.Configs;
 import frc.o2026.Constants;
 import frc.o2026.RobotState;
@@ -62,7 +63,7 @@ public class PoseCameraIOPhoton implements PoseCameraIO {
     return new ArrayList<VisionData>(
         m_camera.getAllUnreadResults().stream()
             .filter(PhotonPipelineResult::hasTargets)
-            // .filter(result -> result.getBestTarget().poseAmbiguity > 0.3)
+            .filter(result -> result.getBestTarget().poseAmbiguity < 0.3)
             .map(
                 (result) -> {
 
@@ -87,16 +88,27 @@ public class PoseCameraIOPhoton implements PoseCameraIO {
                   }
 
                   // Take multiple estimations from multiple tags and average their results
-                  est = estimator.estimateAverageBestTargetsPose(result);
-                  if (est.isPresent()) return est;
+                  if (result.getTargets().size() > 1) {
+                    est = estimator.estimateAverageBestTargetsPose(result);
+                    if (est.isPresent()) return est;
+                  }
 
                   // No complicated sensor fusion between multiple tags or gyro
-                  // simply the best guess
+                  // simply the best guess given a single tag
                   est = estimator.estimateLowestAmbiguityPose(result);
                   return est;
                 })
             .filter(Optional::isPresent)
             .map(Optional::get)
+            .filter(
+                est -> {
+                  return est.estimatedPose.getX() > 0
+                      && est.estimatedPose.getX() < FieldConstants.fieldLength
+                      && est.estimatedPose.getY() > 0
+                      && est.estimatedPose.getY() < FieldConstants.fieldWidth
+                      && est.estimatedPose.getZ() > 0
+                      && est.estimatedPose.getZ() < FieldConstants.LeftBump.height;
+                })
             .map(
                 est -> {
                   var targets = est.targetsUsed.stream().mapToInt((target) -> target.fiducialId);

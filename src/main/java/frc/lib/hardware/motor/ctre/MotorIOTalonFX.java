@@ -28,7 +28,7 @@ import frc.lib.hardware.motor.MotorIO;
 import java.util.function.Supplier;
 import org.littletonrobotics.junction.Logger;
 
-public class TalonIO implements MotorIO {
+public class MotorIOTalonFX implements MotorIO {
 
   final TalonFX m_motor;
 
@@ -37,7 +37,7 @@ public class TalonIO implements MotorIO {
 
   private double m_lastRef = 0.0;
 
-  public TalonIO(int id) {
+  public MotorIOTalonFX(int id) {
 
     m_motor = new TalonFX(id);
     m_posSupplier = m_motor.getPosition().asSupplier();
@@ -46,7 +46,7 @@ public class TalonIO implements MotorIO {
     OrchestraOrchestrator.addInstrument(m_motor);
   }
 
-  public TalonIO(int id, MotorConfig config) {
+  public MotorIOTalonFX(int id, MotorConfig config) {
 
     this(id);
 
@@ -162,7 +162,7 @@ public class TalonIO implements MotorIO {
     var status = m_motor.setControl(new NeutralOut());
     Logger.recordOutput("MotorErr/Talon " + m_motor.getDeviceID(), status.toString());
 
-    // OrchestraOrchestrator.addInstrument(m_motor);
+    OrchestraOrchestrator.addInstrument(m_motor);
 
     m_lastRef = 0.0;
   }

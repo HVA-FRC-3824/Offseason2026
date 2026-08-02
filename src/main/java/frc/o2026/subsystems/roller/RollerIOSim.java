@@ -7,13 +7,13 @@
 package frc.o2026.subsystems.roller;
 
 import edu.wpi.first.math.system.plant.DCMotor;
-import frc.lib.hardware.motor.ctre.MotorSimIO;
+import frc.lib.hardware.motor.ctre.MotorIOSim;
 import frc.o2026.Configs;
 import frc.o2026.Constants;
 import frc.o2026.RobotState;
 import org.littletonrobotics.junction.Logger;
 
-public class RollerIOSim extends MotorSimIO implements RollerIO {
+public class RollerIOSim extends MotorIOSim implements RollerIO {
 
   public RollerIOSim() {
 

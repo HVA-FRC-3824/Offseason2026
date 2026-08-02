@@ -9,6 +9,7 @@ package frc.o2026;
 import static edu.wpi.first.units.Units.Amps;
 import static edu.wpi.first.units.Units.FeetPerSecond;
 import static edu.wpi.first.units.Units.FeetPerSecondPerSecond;
+import static edu.wpi.first.units.Units.MetersPerSecond;
 import static edu.wpi.first.units.Units.RadiansPerSecond;
 import static edu.wpi.first.units.Units.RadiansPerSecondPerSecond;
 import static edu.wpi.first.units.Units.Rotations;
@@ -118,6 +119,7 @@ public class Configs {
   public static final class Chassis {
 
     public static final double AssistPower = 0.9;
+    public static final LinearVelocity IntakeSpeed = MetersPerSecond.of(0.2);
 
     public static final MotorConfig DriveConfig =
         new MotorConfig()

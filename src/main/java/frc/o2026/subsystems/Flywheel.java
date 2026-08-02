@@ -28,6 +28,18 @@ import org.littletonrobotics.junction.Logger;
 
 public class Flywheel extends SubsystemBase {
 
+  private static enum FlywheelDesiredState {
+    off,
+    manual,
+    auto
+  }
+
+  private static enum FlywheelMeasuredState {
+    off,
+    on,
+    stopped
+  }
+
   private boolean m_validShot = false;
 
   private MotorIO m_teacherIO;
@@ -152,14 +164,6 @@ public class Flywheel extends SubsystemBase {
     return runOnce(
         () -> {
           m_teacherIO.setVelocity(velocity);
-        });
-  }
-
-  public Command set(Setpoints setpoint) {
-
-    return runOnce(
-        () -> {
-          m_teacherIO.setVelocity(setpoint.m_velocity);
         });
   }
 

@@ -6,11 +6,11 @@
 
 package frc.o2026.subsystems.roller;
 
-import frc.lib.hardware.motor.ctre.TalonIO;
+import frc.lib.hardware.motor.ctre.MotorIOTalonFX;
 import frc.o2026.Configs;
 import frc.o2026.Constants;
 
-public class RollerIOTalonFX extends TalonIO implements RollerIO {
+public class RollerIOTalonFX extends MotorIOTalonFX implements RollerIO {
 
   public RollerIOTalonFX() {
 

@@ -27,7 +27,7 @@ import frc.lib.hardware.motor.MotorConfig;
 import frc.lib.hardware.motor.MotorIO;
 import org.littletonrobotics.junction.Logger;
 
-public final class SparkMaxIO implements MotorIO {
+public final class MotorIOSparkMax implements MotorIO {
 
   private SparkMax m_motor;
   private SparkMaxConfig m_motorConfig;
@@ -36,7 +36,7 @@ public final class SparkMaxIO implements MotorIO {
 
   private double m_lastRef = 0.0;
 
-  public SparkMaxIO(int id) {
+  public MotorIOSparkMax(int id) {
 
     m_motor = new SparkMax(id, MotorType.kBrushless);
     m_motorConfig = new SparkMaxConfig();
@@ -44,7 +44,7 @@ public final class SparkMaxIO implements MotorIO {
     m_controller = m_motor.getClosedLoopController();
   }
 
-  public SparkMaxIO(int id, MotorConfig config) {
+  public MotorIOSparkMax(int id, MotorConfig config) {
 
     this(id);
 

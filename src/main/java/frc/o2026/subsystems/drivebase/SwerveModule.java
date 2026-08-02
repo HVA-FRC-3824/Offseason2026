@@ -19,8 +19,8 @@ import edu.wpi.first.math.kinematics.SwerveModulePosition;
 import edu.wpi.first.math.kinematics.SwerveModuleState;
 import edu.wpi.first.units.measure.Angle;
 import frc.lib.hardware.motor.MotorIO;
-import frc.lib.hardware.motor.ctre.TalonIO;
-import frc.lib.hardware.motor.rev.SparkMaxIO;
+import frc.lib.hardware.motor.ctre.MotorIOTalonFX;
+import frc.lib.hardware.motor.rev.MotorIOSparkMax;
 import frc.o2026.Configs;
 import frc.o2026.Constants;
 
@@ -31,8 +31,8 @@ public class SwerveModule {
 
   public SwerveModule(int driveMotorCanId, int angleMotorCanId, int angleEncoderCanId) {
 
-    m_drivingMotor = new TalonIO(driveMotorCanId);
-    m_angleMotor = new SparkMaxIO(angleMotorCanId);
+    m_drivingMotor = new MotorIOTalonFX(driveMotorCanId);
+    m_angleMotor = new MotorIOSparkMax(angleMotorCanId);
     angleAbsoluteEncoder = new CANcoder(angleEncoderCanId);
 
     m_drivingMotor.config(Configs.Chassis.DriveConfig);

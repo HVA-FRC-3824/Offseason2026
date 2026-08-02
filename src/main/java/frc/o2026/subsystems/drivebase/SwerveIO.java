@@ -42,10 +42,6 @@ public interface SwerveIO {
 
   public default void resetGyro() {}
 
-  public void setIsXMode(boolean xMode);
-
-  public boolean getIsXMode();
-
   public void periodic();
 
   public Rotation2d getGyroHeading();

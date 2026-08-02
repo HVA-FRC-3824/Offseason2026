@@ -207,13 +207,4 @@ public class SwerveIOReal implements SwerveIO {
 
     return m_gyroIO.getGyroRotation().toRotation2d();
   }
-
-  public boolean getIsXMode() {
-    return m_xMode;
-  }
-
-  public void setIsXMode(boolean xMode) {
-    m_xMode = xMode;
-  }
 }
-;

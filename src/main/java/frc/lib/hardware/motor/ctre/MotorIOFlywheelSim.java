@@ -6,7 +6,7 @@
 
 package frc.lib.hardware.motor.ctre;
 
-import static edu.wpi.first.units.Units.Radians;
+import static edu.wpi.first.units.Units.RotationsPerSecond;
 import static edu.wpi.first.units.Units.Volts;
 
 import com.ctre.phoenix6.sim.TalonFXSimState;
@@ -16,19 +16,19 @@ import edu.wpi.first.math.system.plant.DCMotor;
 import edu.wpi.first.math.system.plant.LinearSystemId;
 import edu.wpi.first.units.measure.Angle;
 import edu.wpi.first.units.measure.Voltage;
-import edu.wpi.first.wpilibj.simulation.DCMotorSim;
+import edu.wpi.first.wpilibj.simulation.FlywheelSim;
 import frc.lib.hardware.SimBattery;
 import frc.lib.hardware.motor.MotorConfig;
 
-public class MotorSimIO extends TalonIO {
+public class MotorIOFlywheelSim extends MotorIOTalonFX {
 
   private final TalonFXSimState m_talonFXSim;
 
-  private final DCMotorSim m_motorSimModel;
+  private final FlywheelSim m_motorSimModel;
 
-  private final double m_gearRatio;
+  private double m_gearRatio;
 
-  public MotorSimIO(
+  public MotorIOFlywheelSim(
       int id, MotorConfig config, boolean isX60, DCMotor gearbox, double moi, double gearRatio) {
 
     super(id, config);
@@ -37,7 +37,7 @@ public class MotorSimIO extends TalonIO {
     m_talonFXSim.setMotorType(isX60 ? MotorType.KrakenX60 : MotorType.KrakenX44);
 
     m_motorSimModel =
-        new DCMotorSim(LinearSystemId.createDCMotorSystem(gearbox, moi, gearRatio), gearbox);
+        new FlywheelSim(LinearSystemId.createFlywheelSystem(gearbox, moi, gearRatio), gearbox);
 
     m_gearRatio = gearRatio;
 
@@ -65,8 +65,8 @@ public class MotorSimIO extends TalonIO {
     // apply the new rotor position and velocity to the TalonFX;
     // note that this is rotor position/velocity (before gear ratio), but
     // DCMotorSim returns mechanism position/velocity (after gear ratio)
-    m_talonFXSim.setRawRotorPosition(m_motorSimModel.getAngularPosition().times(m_gearRatio));
-    m_talonFXSim.setRotorVelocity((m_motorSimModel.getAngularVelocityRPM() / 60.0) * m_gearRatio);
+    m_talonFXSim.setRotorVelocity(
+        m_motorSimModel.getAngularVelocity().in(RotationsPerSecond) * m_gearRatio);
   }
 
   @Override
@@ -85,7 +85,5 @@ public class MotorSimIO extends TalonIO {
   public void resetEncoder(Angle angle) {
 
     super.resetEncoder(angle);
-
-    m_motorSimModel.setAngle(angle.in(Radians));
   }
 }
