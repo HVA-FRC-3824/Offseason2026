@@ -281,13 +281,7 @@ public final class Constants {
     public static final int PdhId = 60; // PDH
   }
 
-  public static final class Pwm {
-    // PWM Ports
-    public static final int ActuatorPort = 1;
-
-    public static final int LedUnderGlowPort = 9;
-    public static final int LedTurretPort = 7;
-  }
+  public static final class Pwm {}
 
   public static final class Usb {
     // drive Input Configurations

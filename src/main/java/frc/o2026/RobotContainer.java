@@ -313,7 +313,7 @@ public class RobotContainer extends SubsystemBase {
     // PATHING COMMANDS & TRIGGERS
 
     NamedCommands.registerCommand(
-        "ShootAll", shootCmd.get().alongWith(m_swerve.aimShoot()).repeatedly());
+        "ShootAll", shootCmd.get().repeatedly().alongWith(m_swerve.aimShoot()));
     NamedCommands.registerCommand("AutoIntake", autoIntakeCmd.get());
 
     new EventTrigger("DeployIntake")
