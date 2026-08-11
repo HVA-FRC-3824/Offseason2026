@@ -24,17 +24,19 @@ import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import edu.wpi.first.wpilibj2.command.WaitCommand;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
-import frc.lib.Alliance;
-import frc.lib.GuitarController;
-import frc.lib.NONBenevolentSalesman;
-import frc.lib.hardware.gyro.GyroIOPigeon;
-import frc.lib.hardware.motor.MotorIONothing;
-import frc.lib.hardware.motor.ctre.MotorIOFlywheelSim;
-import frc.lib.hardware.motor.ctre.MotorIOSim;
-import frc.lib.hardware.motor.ctre.MotorIOTalonFX;
+import frc.shared.GuitarController;
+import frc.shared.NONBenevolentSalesman;
+import frc.shared.Util;
+import frc.shared.hardware.gyro.GyroIOPigeon;
+import frc.shared.hardware.motor.MotorIONothing;
+import frc.shared.hardware.motor.ctre.MotorIOFlywheelSim;
+import frc.shared.hardware.motor.ctre.MotorIOSim;
+import frc.shared.hardware.motor.ctre.MotorIOTalonFX;
 import frc.o2026.subsystems.Flywheel;
 import frc.o2026.subsystems.Indexer;
 import frc.o2026.subsystems.Intake;
+import frc.o2026.subsystems.Roller;
+import frc.o2026.subsystems.Roller.RollerDesiredState;
 import frc.o2026.subsystems.drivebase.Swerve;
 import frc.o2026.subsystems.drivebase.SwerveIOReal;
 import frc.o2026.subsystems.drivebase.SwerveIOSim;
@@ -43,11 +45,7 @@ import frc.o2026.subsystems.drivebase.objectVision.ObjectCameraIOSim;
 import frc.o2026.subsystems.drivebase.poseVision.PoseCameraIOLimelight;
 import frc.o2026.subsystems.drivebase.poseVision.PoseCameraIOPhoton;
 import frc.o2026.subsystems.drivebase.poseVision.PoseCameraIOSim;
-import frc.o2026.subsystems.roller.Roller;
-import frc.o2026.subsystems.roller.Roller.RollerDesiredState;
-import frc.o2026.subsystems.roller.RollerIONothing;
-import frc.o2026.subsystems.roller.RollerIOSim;
-import frc.o2026.subsystems.roller.RollerIOTalonFX;
+
 import java.util.function.Supplier;
 
 public class RobotContainer extends SubsystemBase {
@@ -121,7 +119,7 @@ public class RobotContainer extends SubsystemBase {
                     new PoseCameraIOLimelight(Constants.Vision.LimelightOfDoomAndDespair)),
                 new ObjectCameraIOPhoton(Constants.Vision.BackCamConfig));
 
-        m_roller = new Roller(new RollerIOTalonFX());
+        m_roller = new Roller(new MotorIOTalonFX(Constants.CanIds.FuelIntakeMotorId, Configs.Roller.RollerConfig));
 
         m_indexer =
             new Indexer(
@@ -160,7 +158,7 @@ public class RobotContainer extends SubsystemBase {
                     ? new ObjectCameraIOPhoton(Constants.Vision.BackCamConfig)
                     : new ObjectCameraIOSim(Constants.Vision.BackCamConfig));
 
-        m_roller = new Roller(new RollerIONothing());
+        m_roller = new Roller(new MotorIONothing());
 
         m_indexer = new Indexer(new MotorIONothing(), new MotorIONothing());
 
@@ -178,7 +176,7 @@ public class RobotContainer extends SubsystemBase {
                     new PoseCameraIOSim(Constants.Vision.LimelightOfDoomAndDespair)),
                 new ObjectCameraIOSim(Constants.Vision.BackCamConfig));
 
-        m_roller = new Roller(new RollerIOSim());
+        m_roller = new Roller(new MotorIOSim(Constants.CanIds.FuelIntakeMotorId, Configs.Roller.RollerConfig, true, 0.05, 1, 1));
 
         m_indexer =
             new Indexer(
@@ -186,15 +184,15 @@ public class RobotContainer extends SubsystemBase {
                     Constants.CanIds.IndexerMotorId,
                     Configs.Indexer.BeltConfig,
                     true,
-                    DCMotor.getKrakenX60(1),
                     Constants.SimModels.IndexerMOI,
+                    1,
                     Constants.SimModels.IndexerGearRatio),
                 new MotorIOSim(
                     Constants.CanIds.KickerMotorId,
                     Configs.Indexer.KickerConfig,
                     true,
-                    DCMotor.getKrakenX60(1),
                     Constants.SimModels.IndexerMOI,
+                    1,
                     Constants.SimModels.IndexerGearRatio));
 
         m_intake =
@@ -203,15 +201,15 @@ public class RobotContainer extends SubsystemBase {
                     Constants.CanIds.IntakePositionLeaderMotorId,
                     Configs.Intake.PivotConfig,
                     true,
-                    DCMotor.getKrakenX60(2),
                     Constants.SimModels.IntakeMOI,
+                    2,
                     Constants.SimModels.IntakeGearRatio),
                 new MotorIOSim(
                     Constants.CanIds.IntakePositionFollowerMotorId,
                     Configs.Intake.PivotConfig,
                     true,
-                    DCMotor.getKrakenX60(2),
                     Constants.SimModels.IntakeMOI,
+                    2,
                     Constants.SimModels.IntakeGearRatio));
 
         // Both sims use 2 motors to simulate the effects of the other motor
@@ -221,15 +219,15 @@ public class RobotContainer extends SubsystemBase {
                     Constants.CanIds.FlywheelMotorId,
                     Configs.Flywheel.Config,
                     true,
-                    DCMotor.getKrakenX60(2),
                     Constants.SimModels.FlywheelMOI,
+                    2,
                     Constants.SimModels.FlywheelGearRatio),
                 new MotorIOFlywheelSim(
                     Constants.CanIds.FlywheelFollowerMotorId,
                     Configs.Flywheel.Config,
                     true,
-                    DCMotor.getKrakenX60(2),
                     Constants.SimModels.FlywheelMOI,
+                    2,
                     Constants.SimModels.FlywheelGearRatio));
         break;
     }
@@ -243,16 +241,16 @@ public class RobotContainer extends SubsystemBase {
                 m_swerve.runOnce(
                     () ->
                         m_swerve.resetPose(
-                            Alliance.flipOnRed(new Pose2d(4.4, 7.4, Rotation2d.kCCW_90deg)))),
+                            Util.flipOnRed(new Pose2d(4.4, 7.4, Rotation2d.kCCW_90deg)))),
                 m_swerve
-                    .bLinePathPose(Alliance.flipOnRed(new Pose2d(7.7, 7.5, Rotation2d.kCCW_90deg)))
+                    .bLinePathPose(Util.flipOnRed(new Pose2d(7.7, 7.5, Rotation2d.kCCW_90deg)))
                     .withTimeout(3),
                 autoIntakeCmd.get(),
                 m_swerve.crossTrench(),
                 m_swerve
                     .pidPathPose(
                         () ->
-                            (Alliance.flipOnRed(
+                            (Util.flipOnRed(
                                 new Pose2d(2.3, 2.8, RobotState.getSOTMRotTarget()))))
                     .alongWith(shootCmd.get()))
             .andThen(m_indexer.off()));

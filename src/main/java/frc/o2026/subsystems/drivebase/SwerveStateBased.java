@@ -27,7 +27,6 @@ import edu.wpi.first.math.kinematics.SwerveModuleState;
 import edu.wpi.first.math.util.Units;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
-import frc.lib.Alliance;
 import frc.o2026.Configs;
 import frc.o2026.Constants;
 import frc.o2026.RobotState;
@@ -36,6 +35,8 @@ import frc.o2026.subsystems.drivebase.objectVision.ObjectVision;
 import frc.robot.lib.BLine.FollowPath;
 import frc.robot.lib.BLine.Path;
 import frc.robot.lib.BLine.Path.PathElement;
+import frc.shared.Util;
+
 import java.util.List;
 import org.littletonrobotics.junction.Logger;
 
@@ -88,7 +89,7 @@ public class SwerveStateBased extends SubsystemBase {
             // Rotation PID constants
             new PIDConstants(1.0, 0.0, 0.0)),
         config,
-        Alliance::isRed,
+        Util::isRed,
         this // Subsystem req
         );
 
@@ -102,9 +103,7 @@ public class SwerveStateBased extends SubsystemBase {
                 new PIDController(4.0, 0.2, 0.1),
                 new PIDController(0.2, 0.0, 0.0))
             .withTRatioBasedTranslationHandoffs(true)
-            .withShouldFlip(Alliance::isRed);
-
-    m_io.resetWheelAnglesToZero();
+            .withShouldFlip(Util::isRed);
   }
 
   public ChassisSpeeds getChassisSpeeds() {
@@ -231,7 +230,7 @@ public class SwerveStateBased extends SubsystemBase {
     var desiredStates =
         fieldRelative
             ? ChassisSpeeds.fromFieldRelativeSpeeds(
-                speeds, (Alliance.isRed() ? getHeading() : getHeading().plus(Rotation2d.k180deg)))
+                speeds, (Util.isRed() ? getHeading() : getHeading().plus(Rotation2d.k180deg)))
             : speeds;
 
     m_io.driveRobotRelative(desiredStates);
@@ -244,11 +243,6 @@ public class SwerveStateBased extends SubsystemBase {
   public void resetPose(Pose2d pose) {
 
     m_io.resetPose(pose);
-  }
-
-  public Command resetSwerveModules() {
-
-    return runOnce(() -> m_io.resetWheelAnglesToZero()).withName("resetSwerveModules");
   }
 
   public Command resetPoseCmd(Pose2d pose) {

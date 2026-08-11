@@ -27,7 +27,6 @@ import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.util.Units;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
-import frc.lib.Alliance;
 import frc.o2026.Configs;
 import frc.o2026.Constants;
 import frc.o2026.RobotState;
@@ -36,6 +35,8 @@ import frc.o2026.subsystems.drivebase.objectVision.ObjectVision;
 import frc.robot.lib.BLine.FollowPath;
 import frc.robot.lib.BLine.Path;
 import frc.robot.lib.BLine.Path.PathElement;
+import frc.shared.Util;
+
 import java.util.List;
 import java.util.Optional;
 import java.util.function.Supplier;
@@ -93,7 +94,7 @@ public class Swerve extends SubsystemBase {
             // Rotation PID constants
             new PIDConstants(1.0, 0.0, 0.0)),
         config,
-        Alliance::isRed,
+        Util::isRed,
         this // Subsystem req
         );
 
@@ -107,9 +108,7 @@ public class Swerve extends SubsystemBase {
                 new PIDController(4.0, 0.2, 0.1),
                 new PIDController(0.2, 0.0, 0.0))
             .withTRatioBasedTranslationHandoffs(true)
-            .withShouldFlip(Alliance::isRed);
-
-    m_io.resetWheelAnglesToZero();
+            .withShouldFlip(Util::isRed);
   }
 
   @Override
@@ -158,7 +157,7 @@ public class Swerve extends SubsystemBase {
     var desiredStates =
         fieldRelative
             ? ChassisSpeeds.fromFieldRelativeSpeeds(
-                speeds, (Alliance.isRed() ? getHeading() : getHeading().plus(Rotation2d.k180deg)))
+                speeds, (Util.isRed() ? getHeading() : getHeading().plus(Rotation2d.k180deg)))
             : speeds;
 
     m_io.driveRobotRelative(desiredStates);
@@ -166,11 +165,6 @@ public class Swerve extends SubsystemBase {
     Logger.recordOutput("d-speeds", speeds);
     Logger.recordOutput(
         "d-states", Constants.Chassis.Kinematics.toSwerveModuleStates(desiredStates));
-  }
-
-  public Command resetSwerveModules() {
-
-    return runOnce(() -> m_io.resetWheelAnglesToZero()).withName("resetSwerveModules");
   }
 
   public Command resetPoseCmd(Pose2d pose) {
@@ -229,7 +223,7 @@ public class Swerve extends SubsystemBase {
     return run(() -> {
           var currPose = getPose().toPose2d();
           var targetPose =
-              Alliance.isRed() ? FlippingUtil.flipFieldPose(target.get()) : target.get();
+              Util.isRed() ? FlippingUtil.flipFieldPose(target.get()) : target.get();
           Logger.recordOutput("pid target", targetPose);
 
           var speeds =

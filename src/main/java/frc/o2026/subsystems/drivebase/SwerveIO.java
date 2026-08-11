@@ -28,8 +28,6 @@ public interface SwerveIO {
 
   public void setModuleStates(SwerveModuleState[] states);
 
-  public void resetWheelAnglesToZero();
-
   public SwerveModuleState[] getModuleStates();
 
   public SwerveModulePosition[] getModulePositions();

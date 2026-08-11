@@ -16,8 +16,8 @@ import edu.wpi.first.math.geometry.Rotation3d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.kinematics.SwerveModulePosition;
 import edu.wpi.first.math.kinematics.SwerveModuleState;
-import frc.lib.hardware.gyro.GyroIO;
-import frc.lib.hardware.gyro.GyroIONavX;
+import frc.shared.hardware.gyro.GyroIO;
+import frc.shared.hardware.gyro.GyroIONavX;
 import frc.o2026.Constants;
 import frc.o2026.subsystems.drivebase.poseVision.PoseCameraIO;
 import frc.o2026.subsystems.drivebase.poseVision.PoseVision;
@@ -60,22 +60,26 @@ public class SwerveIOReal implements SwerveIO {
       new SwerveModule(
           Constants.CanIds.FrontRightDriveId,
           Constants.CanIds.FrontRightTurnId,
-          Constants.CanIds.FrontRightEncoderId);
+          Constants.CanIds.FrontRightEncoderId,
+          Constants.Chassis.FrontRightForwardsAngle);
   private SwerveModule m_flSwerveModules =
       new SwerveModule(
           Constants.CanIds.FrontLeftDriveId,
           Constants.CanIds.FrontLeftTurnId,
-          Constants.CanIds.FrontLeftEncoderId);
+          Constants.CanIds.FrontLeftEncoderId,
+          Constants.Chassis.FrontLeftForwardsAngle);
   private SwerveModule m_brSwerveModules =
       new SwerveModule(
           Constants.CanIds.BackRightDriveId,
           Constants.CanIds.BackRightTurnId,
-          Constants.CanIds.BackRightEncoderId);
+          Constants.CanIds.BackRightEncoderId,
+          Constants.Chassis.BackRightForwardsAngle);
   private SwerveModule m_blSwerveModules =
       new SwerveModule(
           Constants.CanIds.BackLeftDriveId,
           Constants.CanIds.BackLeftTurnId,
-          Constants.CanIds.BackLeftEncoderId);
+          Constants.CanIds.BackLeftEncoderId,
+          Constants.Chassis.BackLeftForwardsAngle);
 
   private SwerveDrivePoseEstimator3d m_estimator;
 
@@ -145,15 +149,7 @@ public class SwerveIOReal implements SwerveIO {
     m_blSwerveModules.setDesiredState(states[2]);
     m_brSwerveModules.setDesiredState(states[3]);
   }
-
-  public void resetWheelAnglesToZero() {
-    // Set the swerve wheel angles to zero
-    m_flSwerveModules.setWheelAngleToForward(Constants.Chassis.FrontLeftForwardsAngle);
-    m_frSwerveModules.setWheelAngleToForward(Constants.Chassis.FrontRightForwardsAngle);
-    m_blSwerveModules.setWheelAngleToForward(Constants.Chassis.BackLeftForwardsAngle);
-    m_brSwerveModules.setWheelAngleToForward(Constants.Chassis.BackRightForwardsAngle);
-  }
-
+  
   public SwerveModuleState[] getModuleStates() {
     SwerveModuleState[] states = {
       m_flSwerveModules.getState(),

@@ -19,7 +19,8 @@ import edu.wpi.first.wpilibj.RobotBase;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import edu.wpi.first.wpilibj2.command.WaitCommand;
-import frc.lib.hardware.motor.MotorIO;
+import frc.shared.hardware.motor.MotorIO;
+import frc.shared.hardware.motor.MotorIO.MotorInputs;
 import frc.o2026.Configs;
 import frc.o2026.RobotState;
 import org.littletonrobotics.junction.Logger;
@@ -28,6 +29,8 @@ public class Intake extends SubsystemBase {
 
   private MotorIO m_io;
   private MotorIO m_ioFollower;
+  
+  private MotorInputs m_ioInputs;
 
   public Intake(MotorIO io, MotorIO ioFollower) {
 
@@ -45,8 +48,11 @@ public class Intake extends SubsystemBase {
     m_io.periodic();
     m_ioFollower.periodic();
 
-    Logger.recordOutput("Intake/d-angle", m_io.getLastReference());
-    Logger.recordOutput("Intake/m-angle", m_io.getPos().in(Rotations));
+    m_io.updateInputs(m_ioInputs);
+    Logger.processInputs("Intake", m_ioInputs);
+
+    Logger.recordOutput("Intake/d-angle", m_ioInputs.lastReference);
+    Logger.recordOutput("Intake/m-angle", m_ioInputs.position.in(Rotations));
 
     var pose =
         new Pose3d(
@@ -58,7 +64,7 @@ public class Intake extends SubsystemBase {
     pose =
         pose.rotateAround(
             new Translation3d(Inches.of(0.0), Inches.of(0.0), Meters.of(0.1)),
-            new Rotation3d(Degrees.of(0.0), m_io.getPos(), Degrees.of(0.0)));
+            new Rotation3d(Degrees.of(0.0), m_ioInputs.position, Degrees.of(0.0)));
 
     Logger.recordOutput("Intake/VizPoz", pose);
   }

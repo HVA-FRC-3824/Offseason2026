@@ -30,8 +30,8 @@ import edu.wpi.first.units.measure.Angle;
 import edu.wpi.first.units.measure.Distance;
 import edu.wpi.first.wpilibj.simulation.DCMotorSim;
 import edu.wpi.first.wpilibj.simulation.FlywheelSim;
-import frc.lib.Alliance;
-import frc.lib.hardware.vision.VisionConfig;
+import frc.shared.Util;
+import frc.shared.hardware.vision.VisionConfig;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -62,12 +62,12 @@ public final class Constants {
             new Rotation3d());
 
     public static final Translation2d HubCenter =
-        Alliance.isRed()
+        Util.isRed()
             ? Constants.Field.RedHub.getTranslation().toTranslation2d()
             : Constants.Field.BlueHub.getTranslation().toTranslation2d();
 
     public static final Translation2d HubForward =
-        Alliance.isRed() ? new Translation2d(-1, 0) : new Translation2d(1, 0);
+        Util.isRed() ? new Translation2d(-1, 0) : new Translation2d(1, 0);
 
     // For passing we want to aim towards the inside of our alliance zone
     // zone whichever is closer

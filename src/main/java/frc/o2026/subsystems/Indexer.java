@@ -8,7 +8,7 @@ package frc.o2026.subsystems;
 
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
-import frc.lib.hardware.motor.MotorIO;
+import frc.shared.hardware.motor.MotorIO;
 import frc.o2026.Configs;
 import frc.o2026.RobotState;
 import org.littletonrobotics.junction.Logger;

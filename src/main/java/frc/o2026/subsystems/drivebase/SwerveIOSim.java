@@ -16,9 +16,9 @@ import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.kinematics.SwerveModulePosition;
 import edu.wpi.first.math.kinematics.SwerveModuleState;
 import edu.wpi.first.math.system.plant.DCMotor;
-import frc.lib.rebuilt.RobotBumpSim;
-import frc.lib.sim.SelfControlledSwerveDriveSimulation;
-import frc.lib.sim.SwerveDriveSimulation;
+import frc.shared.rebuilt.RobotBumpSim;
+import frc.shared.sim.SelfControlledSwerveDriveSimulation;
+import frc.shared.sim.SwerveDriveSimulation;
 import frc.o2026.Constants;
 import frc.o2026.RobotState;
 import frc.o2026.subsystems.drivebase.poseVision.PoseCameraIO;
@@ -148,9 +148,6 @@ public class SwerveIOSim implements SwerveIO {
 
     Logger.recordOutput("Sim/Pose3d", simPose3d);
   }
-
-  @Override
-  public void resetWheelAnglesToZero() {}
 
   @Override
   public SwerveModuleState[] getModuleStates() {

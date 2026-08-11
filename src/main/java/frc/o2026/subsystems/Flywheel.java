@@ -17,10 +17,11 @@ import edu.wpi.first.units.measure.AngularVelocity;
 import edu.wpi.first.wpilibj.RobotBase;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
-import frc.lib.hardware.motor.MotorIO;
-import frc.lib.rebuilt.BallSim;
-import frc.lib.rebuilt.firecontrol.ProjectileSimulator;
-import frc.lib.rebuilt.firecontrol.ShotCalculator;
+import frc.shared.hardware.motor.MotorIO;
+import frc.shared.hardware.motor.MotorIO.MotorInputs;
+import frc.shared.rebuilt.BallSim;
+import frc.shared.rebuilt.firecontrol.ProjectileSimulator;
+import frc.shared.rebuilt.firecontrol.ShotCalculator;
 import frc.o2026.Configs;
 import frc.o2026.Constants;
 import frc.o2026.RobotState;
@@ -44,6 +45,8 @@ public class Flywheel extends SubsystemBase {
 
   private MotorIO m_teacherIO;
   private MotorIO m_studentIO;
+
+  private MotorInputs m_ioInputs = new MotorInputs();
 
   private ShotCalculator m_shotCalc;
 
@@ -115,6 +118,9 @@ public class Flywheel extends SubsystemBase {
     m_teacherIO.periodic();
     m_studentIO.periodic();
 
+    m_teacherIO.updateInputs(m_ioInputs);
+    Logger.processInputs("Flywheel", m_ioInputs);
+
     var pose = RobotState.getPoseEst().toPose2d();
     var rot = RobotState.getPoseEst().getRotation();
 
@@ -146,8 +152,8 @@ public class Flywheel extends SubsystemBase {
           });
 
     Logger.recordOutput("flywheel/isReady", isReady());
-    Logger.recordOutput("flywheel/m-velocity", m_teacherIO.getVelocity().in(RotationsPerSecond));
-    Logger.recordOutput("flywheel/d-velocity", m_teacherIO.getLastReference());
+    Logger.recordOutput("flywheel/m-velocity", m_ioInputs.velocity.in(RotationsPerSecond));
+    Logger.recordOutput("flywheel/d-velocity", m_ioInputs.lastReference);
     Logger.recordOutput("flywheel/m-fuelCount", RobotState.getSimFuelCount());
   }
 
@@ -184,7 +190,7 @@ public class Flywheel extends SubsystemBase {
   public boolean isReady() {
 
     return Math.abs(
-            m_teacherIO.getLastReference() - m_teacherIO.getVelocity().in(RotationsPerSecond))
+            m_ioInputs.lastReference - m_ioInputs.velocity.in(RotationsPerSecond))
         <= Configs.Flywheel.SpunUpTolerance;
   }
 

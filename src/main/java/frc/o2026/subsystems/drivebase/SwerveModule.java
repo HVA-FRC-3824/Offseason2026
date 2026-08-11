@@ -6,7 +6,6 @@
 
 package frc.o2026.subsystems.drivebase;
 
-import static edu.wpi.first.units.Units.Degrees;
 import static edu.wpi.first.units.Units.Rotations;
 import static edu.wpi.first.units.Units.RotationsPerSecond;
 
@@ -18,35 +17,45 @@ import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.kinematics.SwerveModulePosition;
 import edu.wpi.first.math.kinematics.SwerveModuleState;
 import edu.wpi.first.units.measure.Angle;
-import frc.lib.hardware.motor.MotorIO;
-import frc.lib.hardware.motor.ctre.MotorIOTalonFX;
-import frc.lib.hardware.motor.rev.MotorIOSparkMax;
+import edu.wpi.first.wpilibj2.command.SubsystemBase;
+import frc.shared.hardware.motor.MotorIO;
+import frc.shared.hardware.motor.MotorIO.MotorInputs;
+import frc.shared.hardware.motor.ctre.MotorIOTalonFX;
+import frc.shared.hardware.motor.rev.MotorIOSparkMax;
 import frc.o2026.Configs;
 import frc.o2026.Constants;
 
-public class SwerveModule {
+public class SwerveModule extends SubsystemBase {
   private final MotorIO m_drivingMotor;
   private final MotorIO m_angleMotor;
-  private final CANcoder angleAbsoluteEncoder;
+  private final CANcoder m_angleAbsoluteEncoder;
 
-  public SwerveModule(int driveMotorCanId, int angleMotorCanId, int angleEncoderCanId) {
+  private MotorInputs m_drivingMotorInputs;
+  private MotorInputs m_angleMotorInputs;
 
-    m_drivingMotor = new MotorIOTalonFX(driveMotorCanId);
-    m_angleMotor = new MotorIOSparkMax(angleMotorCanId);
-    angleAbsoluteEncoder = new CANcoder(angleEncoderCanId);
+  public SwerveModule(
+      int driveMotor, int angleMotor, int angleEncoderCanId, Angle angleOffset) {
 
-    m_drivingMotor.config(Configs.Chassis.DriveConfig);
+    m_drivingMotor = new MotorIOTalonFX(driveMotor, Configs.Chassis.DriveConfig);
+    m_angleMotor = new MotorIOSparkMax(angleMotor, Configs.Chassis.TurnConfig);
+    m_angleAbsoluteEncoder = new CANcoder(angleEncoderCanId);
 
-    m_angleMotor.config(Configs.Chassis.TurnConfig);
-
-    angleAbsoluteEncoder
+    m_angleAbsoluteEncoder
         .getConfigurator()
         .apply(
             new CANcoderConfiguration()
                 .withMagnetSensor(
                     new MagnetSensorConfigs()
-                        .withMagnetOffset(0.0)
+                        .withMagnetOffset(angleOffset)
                         .withSensorDirection(SensorDirectionValue.CounterClockwise_Positive)));
+
+    m_angleMotor.resetEncoder(m_angleAbsoluteEncoder.getAbsolutePosition().getValue());
+  }
+
+  @Override
+  public void periodic() {
+    m_drivingMotor.updateInputs(m_drivingMotorInputs);
+    m_angleMotor.updateInputs(m_angleMotorInputs);
   }
 
   public void setDesiredState(SwerveModuleState desiredState) {
@@ -71,25 +80,15 @@ public class SwerveModule {
   public SwerveModuleState getState() {
 
     return new SwerveModuleState(
-        m_drivingMotor.getVelocity().in(RotationsPerSecond)
+        m_drivingMotorInputs.velocity.in(RotationsPerSecond)
             * Constants.Chassis.DriveMotorConversion,
-        new Rotation2d(m_angleMotor.getPos()));
+        new Rotation2d(m_angleMotorInputs.position));
   }
 
   public SwerveModulePosition getPosition() {
 
     return new SwerveModulePosition(
-        m_drivingMotor.getPos().in(Rotations) * Constants.Chassis.DriveMotorConversion,
-        new Rotation2d(m_angleMotor.getPos()));
-  }
-
-  public void resetEncoders() {
-    m_drivingMotor.resetEncoder(Degrees.of(0.0));
-  }
-
-  public void setWheelAngleToForward(Angle forwardAngle) {
-
-    m_angleMotor.resetEncoder(
-        angleAbsoluteEncoder.getAbsolutePosition().getValue().minus(forwardAngle));
+        m_drivingMotorInputs.position.in(Rotations) * Constants.Chassis.DriveMotorConversion,
+        new Rotation2d(m_angleMotorInputs.position));
   }
 }

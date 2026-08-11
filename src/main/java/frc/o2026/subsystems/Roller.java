@@ -4,7 +4,7 @@
 // Use of this source code is governed by an MIT-style license that can be found in the LICENSE file at
 // the root directory of this project.
 
-package frc.o2026.subsystems.roller;
+package frc.o2026.subsystems;
 
 import static edu.wpi.first.units.Units.RotationsPerSecond;
 import static edu.wpi.first.units.Units.Seconds;
@@ -15,6 +15,10 @@ import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.o2026.Configs;
+import frc.o2026.RobotState;
+import frc.shared.hardware.motor.MotorIO;
+import frc.shared.hardware.motor.MotorIO.MotorInputs;
+
 import org.littletonrobotics.junction.Logger;
 
 public class Roller extends SubsystemBase {
@@ -35,7 +39,8 @@ public class Roller extends SubsystemBase {
   private RollerDesiredState m_desiredState = RollerDesiredState.off;
   private MeasuredState m_measuredState = MeasuredState.off;
 
-  private RollerIO m_io;
+  private MotorIO m_io;
+  private MotorInputs m_ioInputs = new MotorInputs();
 
   private Timer m_blockageDetector = new Timer();
   private Timer m_unblockDuration = new Timer();
@@ -45,7 +50,7 @@ public class Roller extends SubsystemBase {
   // Time unblocking to start moving again
   private static Time unblockingTime = Seconds.of(1.0);
 
-  public Roller(RollerIO io) {
+  public Roller(MotorIO io) {
 
     m_io = io;
   }
@@ -63,10 +68,13 @@ public class Roller extends SubsystemBase {
   @Override
   public void periodic() {
 
-    if (m_io.getVelocity().gt(RotationsPerSecond.of(2.0))) m_measuredState = MeasuredState.on;
-    else if (m_io.getVelocity().lt(RotationsPerSecond.of(-2.0)))
+    m_io.updateInputs(m_ioInputs);
+    Logger.processInputs("Roller", m_ioInputs);
+
+    if (m_ioInputs.velocity.gt(RotationsPerSecond.of(2.0))) m_measuredState = MeasuredState.on;
+    else if (m_ioInputs.velocity.lt(RotationsPerSecond.of(-2.0)))
       m_measuredState = MeasuredState.backwards;
-    else if (m_io.getAppliedVoltage().abs(Volts) > 1.0) m_measuredState = MeasuredState.blocked;
+    else if (m_ioInputs.appliedVolts.abs(Volts) > 1.0) m_measuredState = MeasuredState.blocked;
     else m_measuredState = MeasuredState.off;
 
     switch (m_desiredState) {
@@ -121,7 +129,13 @@ public class Roller extends SubsystemBase {
 
     m_io.periodic();
 
-    Logger.recordOutput("roller/m-velocity", m_io.getVelocity().in(RotationsPerSecond));
-    Logger.recordOutput("roller/d-velocity", m_io.getLastReference());
+    Logger.recordOutput("roller/m-velocity", m_ioInputs.velocity.in(RotationsPerSecond));
+    Logger.recordOutput("roller/d-velocity", m_ioInputs.lastReference);
+
+    if (m_ioInputs.lastReference >= 10.0) {
+      RobotState.setSimIntaking(true);
+    } else {
+      RobotState.setSimIntaking(false);
+    }
   }
 }
