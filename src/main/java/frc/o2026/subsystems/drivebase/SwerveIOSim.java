@@ -16,13 +16,13 @@ import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.kinematics.SwerveModulePosition;
 import edu.wpi.first.math.kinematics.SwerveModuleState;
 import edu.wpi.first.math.system.plant.DCMotor;
-import frc.shared.rebuilt.RobotBumpSim;
-import frc.shared.sim.SelfControlledSwerveDriveSimulation;
-import frc.shared.sim.SwerveDriveSimulation;
 import frc.o2026.Constants;
 import frc.o2026.RobotState;
-import frc.o2026.subsystems.drivebase.poseVision.PoseCameraIO;
-import frc.o2026.subsystems.drivebase.poseVision.PoseVision;
+import frc.shared.hardware.vision.poseVision.PoseCameraIO;
+import frc.shared.hardware.vision.poseVision.PoseVision;
+import frc.shared.sim.SelfControlledSwerveDriveSimulation;
+import frc.shared.sim.SwerveDriveSimulation;
+
 import org.ironmaple.simulation.SimulatedArena;
 import org.ironmaple.simulation.drivesims.COTS;
 import org.ironmaple.simulation.drivesims.configs.DriveTrainSimulationConfig;
@@ -62,8 +62,6 @@ public class SwerveIOSim implements SwerveIO {
       new SelfControlledSwerveDriveSimulation(
           new SwerveDriveSimulation(
               driveTrainSimulationConfig, new Pose2d(2, 2, new Rotation2d(Math.PI))));
-
-  private RobotBumpSim m_robotBumpSim = new RobotBumpSim(Constants.Chassis.ModulePositions);
 
   private PoseVision m_vision;
 
@@ -139,14 +137,7 @@ public class SwerveIOSim implements SwerveIO {
     ChassisSpeeds fieldRelativeSpeeds =
         m_swerveDriveSimulation.getMeasuredSpeedsFieldRelative(false);
 
-    Pose3d simPose3d = m_robotBumpSim.update(simPose, fieldRelativeSpeeds, 20);
-    if (m_robotBumpSim.isOnRamp())
-      simPose3d = new Pose3d(m_robotBumpSim.getSimWorldPose(simPose3d.toPose2d()));
-
-    RobotState.setSimRealPose(simPose3d);
-    RobotState.setSimSpeeds(m_swerveDriveSimulation.getActualSpeedsFieldRelative());
-
-    Logger.recordOutput("Sim/Pose3d", simPose3d);
+    Logger.recordOutput("Sim/Pose", simPose);
   }
 
   @Override

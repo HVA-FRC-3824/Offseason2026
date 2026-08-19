@@ -37,6 +37,15 @@ import java.util.List;
 
 public final class Constants {
 
+    
+  public static enum Robot {
+    Real,
+    DevBot,
+    Sim
+  }
+
+  public static final Robot Impl = Robot.DevBot;
+
   public static final class Field {
     /// *** Field Dimensions *** ///
     public static final double FieldLengthMeters = Units.inchesToMeters(652.11); // 16.56 meters
@@ -60,11 +69,6 @@ public final class Constants {
             FieldWidthMeters / 2,
             HubHeightMeters,
             new Rotation3d());
-
-    public static final Translation2d HubCenter =
-        Util.isRed()
-            ? Constants.Field.RedHub.getTranslation().toTranslation2d()
-            : Constants.Field.BlueHub.getTranslation().toTranslation2d();
 
     public static final Translation2d HubForward =
         Util.isRed() ? new Translation2d(-1, 0) : new Translation2d(1, 0);
@@ -262,11 +266,11 @@ public final class Constants {
     public static final int BackLeftTurnId = 12; // Kraken X44 / NEO v1.2
     public static final int BackLeftEncoderId = 13; // CANCoder
 
-    public static final int BackRightDriveId = 04; // Kraken X60
-    public static final int BackRightTurnId = 02; // Kraken X44 / NEO v1.2
-    public static final int BackRightEncoderId = 03; // CANCoder
+    public static final int BackRightDriveId = 4; // Kraken X60
+    public static final int BackRightTurnId = 2; // Kraken X44 / NEO v1.2
+    public static final int BackRightEncoderId = 3; // CANCoder
 
-    public static final int PigeonGyroId = 05; // CTR Pigeon 2.0
+    public static final int PigeonGyroId = 5; // CTR Pigeon 2.0
 
     public static final int IntakePositionFollowerMotorId = 42; // Kraken X44
     public static final int IntakePositionLeaderMotorId = 41; // Kraken X44

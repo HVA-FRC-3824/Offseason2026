@@ -11,12 +11,8 @@ import com.pathplanner.lib.auto.NamedCommands;
 import com.pathplanner.lib.events.EventTrigger;
 import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.filter.SlewRateLimiter;
-import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
-import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
-import edu.wpi.first.math.system.plant.DCMotor;
-import edu.wpi.first.wpilibj.RobotBase;
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
@@ -24,14 +20,6 @@ import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import edu.wpi.first.wpilibj2.command.WaitCommand;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
-import frc.shared.GuitarController;
-import frc.shared.NONBenevolentSalesman;
-import frc.shared.Util;
-import frc.shared.hardware.gyro.GyroIOPigeon;
-import frc.shared.hardware.motor.MotorIONothing;
-import frc.shared.hardware.motor.ctre.MotorIOFlywheelSim;
-import frc.shared.hardware.motor.ctre.MotorIOSim;
-import frc.shared.hardware.motor.ctre.MotorIOTalonFX;
 import frc.o2026.subsystems.Flywheel;
 import frc.o2026.subsystems.Indexer;
 import frc.o2026.subsystems.Intake;
@@ -40,29 +28,34 @@ import frc.o2026.subsystems.Roller.RollerDesiredState;
 import frc.o2026.subsystems.drivebase.Swerve;
 import frc.o2026.subsystems.drivebase.SwerveIOReal;
 import frc.o2026.subsystems.drivebase.SwerveIOSim;
-import frc.o2026.subsystems.drivebase.objectVision.ObjectCameraIOPhoton;
-import frc.o2026.subsystems.drivebase.objectVision.ObjectCameraIOSim;
-import frc.o2026.subsystems.drivebase.poseVision.PoseCameraIOLimelight;
-import frc.o2026.subsystems.drivebase.poseVision.PoseCameraIOPhoton;
-import frc.o2026.subsystems.drivebase.poseVision.PoseCameraIOSim;
+import frc.o2026.subsystems.drivebase.SwerveModule;
+import frc.shared.GuitarController;
+import frc.shared.NONBenevolentSalesman;
+import frc.shared.hardware.gyro.GyroIOPigeon;
+import frc.shared.hardware.motor.MotorIONothing;
+import frc.shared.hardware.motor.ctre.MotorIOFlywheelSim;
+import frc.shared.hardware.motor.ctre.MotorIOSim;
+import frc.shared.hardware.motor.ctre.MotorIOTalonFX;
+import frc.shared.hardware.motor.rev.MotorIOSparkMax;
+import frc.shared.hardware.vision.objectVision.ObjectCameraIOPhoton;
+import frc.shared.hardware.vision.objectVision.ObjectCameraIOSim;
+import frc.shared.hardware.vision.poseVision.PoseCameraIOLimelight;
+import frc.shared.hardware.vision.poseVision.PoseCameraIOPhoton;
+import frc.shared.hardware.vision.poseVision.PoseCameraIOSim;
+
+import static edu.wpi.first.units.Units.Inches;
 
 import java.util.function.Supplier;
 
+import org.ironmaple.simulation.SimulatedArena;
+
 public class RobotContainer extends SubsystemBase {
 
-  private Swerve m_swerve;
-  private Roller m_roller;
-  private Indexer m_indexer;
-  private Intake m_intake;
-  private Flywheel m_flywheel;
-
-  private static enum Robot {
-    Real,
-    DevBot,
-    Sim
-  }
-
-  private static Robot m_impl = Robot.DevBot;
+  private final Swerve m_swerve;
+  private final Roller m_roller;
+  private final Indexer m_indexer;
+  private final Intake m_intake;
+  private final Flywheel m_flywheel;
 
   private CommandXboxController m_driver = new CommandXboxController(Constants.Usb.DrivePort);
   //   private CommandXboxController m_operator = new
@@ -80,46 +73,59 @@ public class RobotContainer extends SubsystemBase {
     Linear
   }
 
-  Limiting m_limit = Limiting.TrigExp;
+  private Limiting m_limit = Limiting.TrigExp;
 
   private final SendableChooser<Command> m_autoChooser;
 
-  private final Supplier<Command> shootCmd =
-      () ->
-          Commands.parallel(
-              m_flywheel.auto(),
-              m_indexer.on().onlyWhile(() -> m_flywheel.isReady() && m_swerve.isAimed()),
-              m_intake.stowed());
-
-  private final Supplier<Command> autoIntakeCmd =
-      () ->
-          Commands.parallel(
-                  m_intake.deploy(),
-                  m_roller.setState(RollerDesiredState.on),
-                  m_swerve
-                      .autoIntake()
-                      .andThen(
-                          m_swerve.drive(() -> new ChassisSpeeds(0.5, 0.0, Math.PI / 2), false))
-                      .until(m_swerve::hasObjects)
-                      .repeatedly())
-              .withTimeout(3)
-              .andThen(
-                  Commands.sequence(m_roller.setState(RollerDesiredState.off), m_intake.stowed()));
+  private final Supplier<Command> shootCmd;
 
   public RobotContainer() {
 
-    switch (m_impl) {
+    switch (Constants.Impl) {
       case Real:
         m_swerve =
             new Swerve(
                 new SwerveIOReal(
-                    new GyroIOPigeon(Constants.CanIds.PigeonGyroId),
-                    new PoseCameraIOPhoton(Constants.Vision.FrontCamConfig),
-                    new PoseCameraIOPhoton(Constants.Vision.WebCam),
-                    new PoseCameraIOLimelight(Constants.Vision.LimelightOfDoomAndDespair)),
-                new ObjectCameraIOPhoton(Constants.Vision.BackCamConfig));
+                    new SwerveModule(
+                        new MotorIOTalonFX(
+                            Constants.CanIds.FrontRightDriveId, Configs.Chassis.DriveConfig),
+                        new MotorIOTalonFX(
+                            Constants.CanIds.FrontRightTurnId, Configs.Chassis.TurnConfig),
+                        Constants.CanIds.FrontRightEncoderId,
+                        Constants.Chassis.FrontRightForwardsAngle),
+                    new SwerveModule(
+                        new MotorIOTalonFX(
+                            Constants.CanIds.FrontLeftDriveId, Configs.Chassis.DriveConfig),
+                        new MotorIOTalonFX(
+                            Constants.CanIds.FrontLeftTurnId, Configs.Chassis.TurnConfig),
+                        Constants.CanIds.FrontLeftEncoderId,
+                        Constants.Chassis.FrontLeftForwardsAngle),
+                    new SwerveModule(
+                        new MotorIOTalonFX(
+                            Constants.CanIds.BackRightDriveId, Configs.Chassis.DriveConfig),
+                        new MotorIOTalonFX(
+                            Constants.CanIds.BackRightTurnId, Configs.Chassis.TurnConfig),
+                        Constants.CanIds.BackRightEncoderId,
+                        Constants.Chassis.BackRightForwardsAngle),
+                    new SwerveModule(
+                        new MotorIOTalonFX(
+                            Constants.CanIds.BackLeftDriveId, Configs.Chassis.DriveConfig),
+                        new MotorIOTalonFX(
+                            Constants.CanIds.BackLeftTurnId, Configs.Chassis.TurnConfig),
+                        Constants.CanIds.BackLeftEncoderId,
+                        Constants.Chassis.BackLeftForwardsAngle),
+                    new GyroIOPigeon(Constants.CanIds.PigeonGyroId)//,
+                    // new PoseCameraIOPhoton(Constants.Vision.FrontCamConfig),
+                    // new PoseCameraIOPhoton(Constants.Vision.WebCam),
+                    // new PoseCameraIOLimelight(Constants.Vision.LimelightOfDoomAndDespair)
+                ),
+                new ObjectCameraIOPhoton(
+                    Constants.Vision.BackCamConfig, Inches.of(3.0)));
 
-        m_roller = new Roller(new MotorIOTalonFX(Constants.CanIds.FuelIntakeMotorId, Configs.Roller.RollerConfig));
+        m_roller =
+            new Roller(
+                new MotorIOTalonFX(
+                    Constants.CanIds.FuelIntakeMotorId, Configs.Roller.RollerConfig));
 
         m_indexer =
             new Indexer(
@@ -144,19 +150,41 @@ public class RobotContainer extends SubsystemBase {
       case DevBot:
         m_swerve =
             new Swerve(
-                RobotBase.isReal()
-                    ? new SwerveIOReal(
-                        new GyroIOPigeon(Constants.CanIds.PigeonGyroId),
-                        new PoseCameraIOPhoton(Constants.Vision.FrontCamConfig),
-                        new PoseCameraIOPhoton(Constants.Vision.WebCam),
-                        new PoseCameraIOLimelight(Constants.Vision.LimelightOfDoomAndDespair))
-                    : new SwerveIOSim(
-                        new PoseCameraIOSim(Constants.Vision.FrontCamConfig),
-                        new PoseCameraIOSim(Constants.Vision.WebCam),
-                        new PoseCameraIOSim(Constants.Vision.LimelightOfDoomAndDespair)),
-                RobotBase.isReal()
-                    ? new ObjectCameraIOPhoton(Constants.Vision.BackCamConfig)
-                    : new ObjectCameraIOSim(Constants.Vision.BackCamConfig));
+                new SwerveIOReal(
+                    new SwerveModule(
+                        new MotorIOTalonFX(
+                            Constants.CanIds.FrontRightDriveId, Configs.Chassis.DriveConfig),
+                        new MotorIOSparkMax(
+                            Constants.CanIds.FrontRightTurnId, Configs.Chassis.TurnConfig),
+                        Constants.CanIds.FrontRightEncoderId,
+                        Constants.Chassis.FrontRightForwardsAngle),
+                    new SwerveModule(
+                        new MotorIOTalonFX(
+                            Constants.CanIds.FrontLeftDriveId, Configs.Chassis.DriveConfig),
+                        new MotorIOSparkMax(
+                            Constants.CanIds.FrontLeftTurnId, Configs.Chassis.TurnConfig),
+                        Constants.CanIds.FrontLeftEncoderId,
+                        Constants.Chassis.FrontLeftForwardsAngle),
+                    new SwerveModule(
+                        new MotorIOTalonFX(
+                            Constants.CanIds.BackRightDriveId, Configs.Chassis.DriveConfig),
+                        new MotorIOSparkMax(
+                            Constants.CanIds.BackRightTurnId, Configs.Chassis.TurnConfig),
+                        Constants.CanIds.BackRightEncoderId,
+                        Constants.Chassis.BackRightForwardsAngle),
+                    new SwerveModule(
+                        new MotorIOTalonFX(
+                            Constants.CanIds.BackLeftDriveId, Configs.Chassis.DriveConfig),
+                        new MotorIOSparkMax(
+                            Constants.CanIds.BackLeftTurnId, Configs.Chassis.TurnConfig),
+                        Constants.CanIds.BackLeftEncoderId,
+                        Constants.Chassis.BackLeftForwardsAngle),
+                    new GyroIOPigeon(Constants.CanIds.PigeonGyroId),
+                    new PoseCameraIOPhoton(Constants.Vision.FrontCamConfig),
+                    new PoseCameraIOPhoton(Constants.Vision.WebCam),
+                    new PoseCameraIOLimelight(Constants.Vision.LimelightOfDoomAndDespair)),
+                new ObjectCameraIOPhoton(
+                    Constants.Vision.BackCamConfig, Inches.of(3.0)));
 
         m_roller = new Roller(new MotorIONothing());
 
@@ -167,16 +195,24 @@ public class RobotContainer extends SubsystemBase {
         m_flywheel = new Flywheel(new MotorIONothing(), new MotorIONothing());
         break;
 
-      case Sim:
+      default:
         m_swerve =
             new Swerve(
                 new SwerveIOSim(
                     new PoseCameraIOSim(Constants.Vision.FrontCamConfig),
                     new PoseCameraIOSim(Constants.Vision.WebCam),
                     new PoseCameraIOSim(Constants.Vision.LimelightOfDoomAndDespair)),
-                new ObjectCameraIOSim(Constants.Vision.BackCamConfig));
+                new ObjectCameraIOSim(Constants.Vision.BackCamConfig, SimulatedArena.getInstance()));
 
-        m_roller = new Roller(new MotorIOSim(Constants.CanIds.FuelIntakeMotorId, Configs.Roller.RollerConfig, true, 0.05, 1, 1));
+        m_roller =
+            new Roller(
+                new MotorIOSim(
+                    Constants.CanIds.FuelIntakeMotorId,
+                    Configs.Roller.RollerConfig,
+                    true,
+                    0.05,
+                    1,
+                    1));
 
         m_indexer =
             new Indexer(
@@ -232,33 +268,24 @@ public class RobotContainer extends SubsystemBase {
         break;
     }
 
+    // COMMAND CREATORS
+
+    shootCmd =
+      () ->
+          Commands.parallel(
+              m_flywheel.auto(),
+              m_indexer.on().onlyWhile(() -> m_flywheel.isReady() && m_swerve.isAimed()),
+              m_intake.stowed());
+
     // AUTOS
 
     m_autoChooser = AutoBuilder.buildAutoChooser();
-    m_autoChooser.addOption(
-        "Custom",
-        Commands.sequence(
-                m_swerve.runOnce(
-                    () ->
-                        m_swerve.resetPose(
-                            Util.flipOnRed(new Pose2d(4.4, 7.4, Rotation2d.kCCW_90deg)))),
-                m_swerve
-                    .bLinePathPose(Util.flipOnRed(new Pose2d(7.7, 7.5, Rotation2d.kCCW_90deg)))
-                    .withTimeout(3),
-                autoIntakeCmd.get(),
-                m_swerve.crossTrench(),
-                m_swerve
-                    .pidPathPose(
-                        () ->
-                            (Util.flipOnRed(
-                                new Pose2d(2.3, 2.8, RobotState.getSOTMRotTarget()))))
-                    .alongWith(shootCmd.get()))
-            .andThen(m_indexer.off()));
     SmartDashboard.putData("Auto Chooser", m_autoChooser);
 
     // DEFAULT COMMANDS
 
-    m_swerve.setDefaultCommand(m_swerve.drive(this::getSpeeds));
+    m_swerve.setDefaultCommand(m_swerve.runOnce(() -> 
+        m_swerve.setState(Swerve.DesiredState.driveDefault.with(getSpeeds()))));
     m_flywheel.setDefaultCommand(m_flywheel.off());
     m_indexer.setDefaultCommand(m_indexer.off());
     m_roller.setDefaultCommand(m_roller.setState(RollerDesiredState.off));
@@ -268,7 +295,13 @@ public class RobotContainer extends SubsystemBase {
     m_driver.a().onTrue(m_swerve.resetGyro());
     m_driver.y().onTrue(m_swerve.toggleFieldCentricity());
 
-    m_driver.rightTrigger().whileTrue(shootCmd.get().alongWith(m_swerve.aimSOTM(this::getSpeeds)));
+    m_driver
+        .rightTrigger()
+        .whileTrue(
+            shootCmd.get()
+            .alongWith(
+                m_swerve.run(() -> 
+                    m_swerve.setState(Swerve.DesiredState.intakeAssist.with(getSpeeds())))));
 
     m_driver
         .leftTrigger()
@@ -276,27 +309,23 @@ public class RobotContainer extends SubsystemBase {
             Commands.parallel(
                 m_intake.deploy(),
                 m_roller.setState(RollerDesiredState.on),
-                m_swerve.targetAssistedDrive(this::getSpeeds)));
+                m_swerve.run(() -> m_swerve.setState(Swerve.DesiredState.intakeAssist.with(getSpeeds())))));
 
-    SmartDashboard.putData("Auto Intake", autoIntakeCmd.get());
-    SmartDashboard.putData("Cross Trench", m_swerve.crossTrench());
-    SmartDashboard.putData("SOTM", SOTM(new Translation2d(2.0, 3.9)));
 
-    SmartDashboard.putData("yUp", m_swerve.drive(() -> new ChassisSpeeds(-0.5, 0.0, 0.0), true));
-    SmartDashboard.putData("yDown", m_swerve.drive(() -> new ChassisSpeeds(0.5, 0.0, 0.0), true));
-    SmartDashboard.putData("xLeft", m_swerve.drive(() -> new ChassisSpeeds(0.0, -0.5, 0.0), true));
-    SmartDashboard.putData("xRight", m_swerve.drive(() -> new ChassisSpeeds(0.0, 0.5, 0.0), true));
+    // SmartDashboard.putData("yUp", m_swerve.drive(() -> new ChassisSpeeds(-0.5, 0.0, 0.0), true));
+    // SmartDashboard.putData("yDown", m_swerve.drive(() -> new ChassisSpeeds(0.5, 0.0, 0.0), true));
+    // SmartDashboard.putData("xLeft", m_swerve.drive(() -> new ChassisSpeeds(0.0, -0.5, 0.0), true));
+    // SmartDashboard.putData("xRight", m_swerve.drive(() -> new ChassisSpeeds(0.0, 0.5, 0.0), true));
 
-    SmartDashboard.putData(
-        "rotLeft", m_swerve.drive(() -> new ChassisSpeeds(0.0, 0.0, Math.PI / 2), true));
-    SmartDashboard.putData(
-        "rotRight", m_swerve.drive(() -> new ChassisSpeeds(0.0, 0.0, -Math.PI / 2), true));
+    // SmartDashboard.putData(
+    //     "rotLeft", m_swerve.drive(() -> new ChassisSpeeds(0.0, 0.0, Math.PI / 2), true));
+    // SmartDashboard.putData(
+    //     "rotRight", m_swerve.drive(() -> new ChassisSpeeds(0.0, 0.0, -Math.PI / 2), true));
 
-    m_guitar.A().onTrue(m_swerve.drive(() -> new ChassisSpeeds(-0.5, 0.0, 0.0)));
-    m_guitar.D().onTrue(m_swerve.drive(() -> new ChassisSpeeds(0.5, 0.0, 0.0)));
-    m_guitar.G().onTrue(m_swerve.drive(() -> new ChassisSpeeds(0.0, -0.5, 0.0)));
-    m_guitar.B().onTrue(m_swerve.drive(() -> new ChassisSpeeds(0.0, 0.5, 0.0)));
-    m_guitar.E().onTrue(m_swerve.crossTrench());
+    // m_guitar.A().onTrue(m_swerve.drive(() -> new ChassisSpeeds(-0.5, 0.0, 0.0)));
+    // m_guitar.D().onTrue(m_swerve.drive(() -> new ChassisSpeeds(0.5, 0.0, 0.0)));
+    // m_guitar.G().onTrue(m_swerve.drive(() -> new ChassisSpeeds(0.0, -0.5, 0.0)));
+    // m_guitar.B().onTrue(m_swerve.drive(() -> new ChassisSpeeds(0.0, 0.5, 0.0)));
 
     m_creditOrDebit
         .swipe()
@@ -304,15 +333,15 @@ public class RobotContainer extends SubsystemBase {
             m_swerve.defer(
                 () -> {
                   return Commands.race(
-                      m_swerve.aim(m_swerve.getHeading().plus(Rotation2d.k180deg)).repeatedly(),
+                      m_swerve.run(() -> 
+                        m_swerve.setState(Swerve.DesiredState.aim.with(m_swerve.getHeading().plus(Rotation2d.k180deg)))).repeatedly(),
                       new WaitCommand(10));
                 }));
 
     // PATHING COMMANDS & TRIGGERS
 
     NamedCommands.registerCommand(
-        "ShootAll", shootCmd.get().repeatedly().alongWith(m_swerve.aimShoot()));
-    NamedCommands.registerCommand("AutoIntake", autoIntakeCmd.get());
+        "ShootAll", shootCmd.get().repeatedly().alongWith(m_swerve.run(() -> m_swerve.setState(Swerve.DesiredState.aimSOTM))));
 
     new EventTrigger("DeployIntake")
         .onTrue(m_intake.deploy().andThen(m_roller.setState(RollerDesiredState.on)));
@@ -353,13 +382,6 @@ public class RobotContainer extends SubsystemBase {
         Configs.Chassis.MaximumLinear.times(strafe),
         Configs.Chassis.MaximumLinear.times(forwards),
         Configs.Chassis.MaximumAngularVelocity.times(rot));
-  }
-
-  public Command SOTM(Translation2d target) {
-
-    return m_swerve
-        .pidPathPose(() -> new Pose2d(target, RobotState.getSOTMRotTarget()))
-        .alongWith(shootCmd.get());
   }
 
   public Command getAuto() {

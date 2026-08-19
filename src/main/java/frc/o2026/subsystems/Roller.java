@@ -18,7 +18,6 @@ import frc.o2026.Configs;
 import frc.o2026.RobotState;
 import frc.shared.hardware.motor.MotorIO;
 import frc.shared.hardware.motor.MotorIO.MotorInputs;
-
 import org.littletonrobotics.junction.Logger;
 
 public class Roller extends SubsystemBase {
@@ -82,14 +81,15 @@ public class Roller extends SubsystemBase {
 
         // 1. Check if we're stopped and start timer before attempting unblock
         if (m_measuredState == MeasuredState.blocked) {
+          m_blockageDetector.reset();
           m_blockageDetector.start();
         } else if (m_measuredState == MeasuredState.on) {
           m_blockageDetector.stop();
-          m_blockageDetector.reset();
         }
 
         // 2. If the block timer exceeds the buffer time, start unblocking
         if (m_blockageDetector.get() > blockTime.in(Seconds)) {
+          m_unblockDuration.reset();
           m_unblockDuration.start();
         }
 
@@ -101,12 +101,12 @@ public class Roller extends SubsystemBase {
 
         // 4. If we're unblocking, reverse
         if (m_unblockDuration.isRunning()) {
-          m_io.setVelocity(Configs.Roller.IntakeDriveTurnsPerSec.times(-1.0));
+          m_io.setVelocity(Configs.Roller.IntakeTurnsPerSec.times(-1.0));
           break;
         }
 
         // 5. If nothing else, intake
-        m_io.setVelocity(Configs.Roller.IntakeDriveTurnsPerSec);
+        m_io.setVelocity(Configs.Roller.IntakeTurnsPerSec);
         break;
 
       case off:
@@ -118,7 +118,7 @@ public class Roller extends SubsystemBase {
         m_blockageDetector.reset();
         break;
       case backwards:
-        m_io.setVelocity(Configs.Roller.IntakeDriveTurnsPerSec.times(-1.0));
+        m_io.setVelocity(Configs.Roller.IntakeTurnsPerSec.times(-1.0));
 
         m_unblockDuration.stop();
         m_unblockDuration.reset();
@@ -126,6 +126,8 @@ public class Roller extends SubsystemBase {
         m_blockageDetector.reset();
         break;
     }
+
+    if (m_desiredState != RollerDesiredState.on)
 
     m_io.periodic();
 

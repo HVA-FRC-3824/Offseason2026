@@ -67,7 +67,7 @@ public class Configs {
             .withContinuousWrap(false)
             .withP(0.2);
 
-    public static final AngularVelocity IntakeDriveTurnsPerSec = RotationsPerSecond.of(600.0);
+    public static final AngularVelocity IntakeTurnsPerSec = RotationsPerSecond.of(120.0);
   }
 
   public static final class Indexer {
@@ -118,8 +118,8 @@ public class Configs {
 
   public static final class Chassis {
 
-    public static final double AssistPower = 0.9;
-    public static final LinearVelocity IntakeSpeed = MetersPerSecond.of(0.2);
+    public static final double IntakeAssistRotationPower = 0.9;
+    public static final LinearVelocity IntakeAssistSpeed = MetersPerSecond.of(0.2);
 
     public static final MotorConfig DriveConfig =
         new MotorConfig()

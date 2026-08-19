@@ -17,14 +17,15 @@ import edu.wpi.first.units.measure.AngularVelocity;
 import edu.wpi.first.wpilibj.RobotBase;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
+import frc.o2026.Configs;
+import frc.o2026.Constants;
+import frc.o2026.RobotState;
+import frc.shared.Util;
 import frc.shared.hardware.motor.MotorIO;
 import frc.shared.hardware.motor.MotorIO.MotorInputs;
 import frc.shared.rebuilt.BallSim;
 import frc.shared.rebuilt.firecontrol.ProjectileSimulator;
 import frc.shared.rebuilt.firecontrol.ShotCalculator;
-import frc.o2026.Configs;
-import frc.o2026.Constants;
-import frc.o2026.RobotState;
 import org.littletonrobotics.junction.Logger;
 
 public class Flywheel extends SubsystemBase {
@@ -131,7 +132,9 @@ public class Flywheel extends SubsystemBase {
                 ChassisSpeeds.fromRobotRelativeSpeeds(
                     RobotState.getLastMeasuredSpeeds(), pose.getRotation()),
                 RobotState.getLastMeasuredSpeeds(),
-                Constants.Field.HubCenter,
+                Util.isRed()
+                  ? Constants.Field.RedHub.getTranslation().toTranslation2d()
+                  : Constants.Field.BlueHub.getTranslation().toTranslation2d(),
                 Constants.Field.HubForward,
                 0.9, // vision confidence, 0 to 1
                 rot.getMeasureY().in(Degrees),
@@ -189,8 +192,7 @@ public class Flywheel extends SubsystemBase {
 
   public boolean isReady() {
 
-    return Math.abs(
-            m_ioInputs.lastReference - m_ioInputs.velocity.in(RotationsPerSecond))
+    return Math.abs(m_ioInputs.lastReference - m_ioInputs.velocity.in(RotationsPerSecond))
         <= Configs.Flywheel.SpunUpTolerance;
   }
 

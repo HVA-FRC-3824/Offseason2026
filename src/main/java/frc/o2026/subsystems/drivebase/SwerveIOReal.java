@@ -16,11 +16,11 @@ import edu.wpi.first.math.geometry.Rotation3d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.kinematics.SwerveModulePosition;
 import edu.wpi.first.math.kinematics.SwerveModuleState;
+import frc.o2026.Constants;
 import frc.shared.hardware.gyro.GyroIO;
 import frc.shared.hardware.gyro.GyroIONavX;
-import frc.o2026.Constants;
-import frc.o2026.subsystems.drivebase.poseVision.PoseCameraIO;
-import frc.o2026.subsystems.drivebase.poseVision.PoseVision;
+import frc.shared.hardware.vision.poseVision.PoseCameraIO;
+import frc.shared.hardware.vision.poseVision.PoseVision;
 import org.littletonrobotics.junction.Logger;
 
 /// @brief Chassis subsystem for swerve drive control
@@ -56,30 +56,10 @@ public class SwerveIOReal implements SwerveIO {
   //      | 2      3 |                 |
   //   BL +----------+ BR              |
 
-  private SwerveModule m_frSwerveModules =
-      new SwerveModule(
-          Constants.CanIds.FrontRightDriveId,
-          Constants.CanIds.FrontRightTurnId,
-          Constants.CanIds.FrontRightEncoderId,
-          Constants.Chassis.FrontRightForwardsAngle);
-  private SwerveModule m_flSwerveModules =
-      new SwerveModule(
-          Constants.CanIds.FrontLeftDriveId,
-          Constants.CanIds.FrontLeftTurnId,
-          Constants.CanIds.FrontLeftEncoderId,
-          Constants.Chassis.FrontLeftForwardsAngle);
-  private SwerveModule m_brSwerveModules =
-      new SwerveModule(
-          Constants.CanIds.BackRightDriveId,
-          Constants.CanIds.BackRightTurnId,
-          Constants.CanIds.BackRightEncoderId,
-          Constants.Chassis.BackRightForwardsAngle);
-  private SwerveModule m_blSwerveModules =
-      new SwerveModule(
-          Constants.CanIds.BackLeftDriveId,
-          Constants.CanIds.BackLeftTurnId,
-          Constants.CanIds.BackLeftEncoderId,
-          Constants.Chassis.BackLeftForwardsAngle);
+  private SwerveModule m_frSwerveModules;
+  private SwerveModule m_flSwerveModules;
+  private SwerveModule m_brSwerveModules;
+  private SwerveModule m_blSwerveModules;
 
   private SwerveDrivePoseEstimator3d m_estimator;
 
@@ -92,7 +72,13 @@ public class SwerveIOReal implements SwerveIO {
 
   private GyroIO m_GyroIO2 = new GyroIONavX();
 
-  public SwerveIOReal(GyroIO gyroIO, PoseCameraIO... cameras) {
+  public SwerveIOReal(
+      SwerveModule fr,
+      SwerveModule fl,
+      SwerveModule br,
+      SwerveModule bl,
+      GyroIO gyroIO,
+      PoseCameraIO... cameras) {
 
     m_gyroIO = gyroIO;
 
@@ -149,7 +135,7 @@ public class SwerveIOReal implements SwerveIO {
     m_blSwerveModules.setDesiredState(states[2]);
     m_brSwerveModules.setDesiredState(states[3]);
   }
-  
+
   public SwerveModuleState[] getModuleStates() {
     SwerveModuleState[] states = {
       m_flSwerveModules.getState(),

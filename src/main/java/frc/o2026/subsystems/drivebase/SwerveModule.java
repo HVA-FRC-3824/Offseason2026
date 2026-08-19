@@ -18,12 +18,9 @@ import edu.wpi.first.math.kinematics.SwerveModulePosition;
 import edu.wpi.first.math.kinematics.SwerveModuleState;
 import edu.wpi.first.units.measure.Angle;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
+import frc.o2026.Constants;
 import frc.shared.hardware.motor.MotorIO;
 import frc.shared.hardware.motor.MotorIO.MotorInputs;
-import frc.shared.hardware.motor.ctre.MotorIOTalonFX;
-import frc.shared.hardware.motor.rev.MotorIOSparkMax;
-import frc.o2026.Configs;
-import frc.o2026.Constants;
 
 public class SwerveModule extends SubsystemBase {
   private final MotorIO m_drivingMotor;
@@ -34,10 +31,10 @@ public class SwerveModule extends SubsystemBase {
   private MotorInputs m_angleMotorInputs;
 
   public SwerveModule(
-      int driveMotor, int angleMotor, int angleEncoderCanId, Angle angleOffset) {
+      MotorIO driveMotor, MotorIO angleMotor, int angleEncoderCanId, Angle angleOffset) {
 
-    m_drivingMotor = new MotorIOTalonFX(driveMotor, Configs.Chassis.DriveConfig);
-    m_angleMotor = new MotorIOSparkMax(angleMotor, Configs.Chassis.TurnConfig);
+    m_drivingMotor = driveMotor;
+    m_angleMotor = angleMotor;
     m_angleAbsoluteEncoder = new CANcoder(angleEncoderCanId);
 
     m_angleAbsoluteEncoder
@@ -60,17 +57,13 @@ public class SwerveModule extends SubsystemBase {
 
   public void setDesiredState(SwerveModuleState desiredState) {
 
-    // desiredState.optimize(Rotation2d.fromRotations(m_angleMotor.getPos().in(Rotations)));
+    desiredState.optimize(new Rotation2d(m_angleMotorInputs.position));
 
     m_drivingMotor.setVelocity(
         RotationsPerSecond.of(
             desiredState.speedMetersPerSecond / Constants.Chassis.DriveMotorConversion));
 
     m_angleMotor.setPosition(desiredState.angle.getMeasure());
-
-    // if (desiredState.angle.getMeasure() == m_angleMotor.getPos()) {
-    //   m_angleMotor.brake();
-    // }
 
     if (desiredState.speedMetersPerSecond == 0.0) {
       m_drivingMotor.brake();

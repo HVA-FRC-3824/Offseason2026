@@ -26,9 +26,10 @@ public class Robot extends LoggedRobot {
 
   public Robot() {
 
-    m_robotContainer = new RobotContainer();
     Logger.addDataReceiver(new NT4Publisher());
     Logger.start();
+    
+    m_robotContainer = new RobotContainer();
 
     OrchestraOrchestrator.sendChooser();
   }

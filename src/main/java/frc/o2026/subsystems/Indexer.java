@@ -8,9 +8,9 @@ package frc.o2026.subsystems;
 
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
-import frc.shared.hardware.motor.MotorIO;
 import frc.o2026.Configs;
 import frc.o2026.RobotState;
+import frc.shared.hardware.motor.MotorIO;
 import org.littletonrobotics.junction.Logger;
 
 public class Indexer extends SubsystemBase {

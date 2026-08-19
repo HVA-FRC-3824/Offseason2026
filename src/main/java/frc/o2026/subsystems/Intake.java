@@ -19,18 +19,18 @@ import edu.wpi.first.wpilibj.RobotBase;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import edu.wpi.first.wpilibj2.command.WaitCommand;
-import frc.shared.hardware.motor.MotorIO;
-import frc.shared.hardware.motor.MotorIO.MotorInputs;
 import frc.o2026.Configs;
 import frc.o2026.RobotState;
+import frc.shared.hardware.motor.MotorIO;
+import frc.shared.hardware.motor.MotorIO.MotorInputs;
 import org.littletonrobotics.junction.Logger;
 
 public class Intake extends SubsystemBase {
 
   private MotorIO m_io;
   private MotorIO m_ioFollower;
-  
-  private MotorInputs m_ioInputs;
+
+  private MotorInputs m_ioInputs = new MotorInputs();
 
   public Intake(MotorIO io, MotorIO ioFollower) {
 

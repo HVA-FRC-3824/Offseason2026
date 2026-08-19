@@ -7,6 +7,7 @@
 package frc.o2026.subsystems.drivebase;
 
 import static edu.wpi.first.units.Units.Degrees;
+import static edu.wpi.first.units.Units.MetersPerSecond;
 import static edu.wpi.first.units.Units.Radians;
 
 import com.pathplanner.lib.auto.AutoBuilder;
@@ -16,44 +17,42 @@ import com.pathplanner.lib.controllers.PPHolonomicDriveController;
 import com.pathplanner.lib.path.GoalEndState;
 import com.pathplanner.lib.path.IdealStartingState;
 import com.pathplanner.lib.path.PathPlannerPath;
-import com.pathplanner.lib.util.FlippingUtil;
-import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Pose3d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
+import edu.wpi.first.math.kinematics.SwerveModuleState;
 import edu.wpi.first.math.util.Units;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.o2026.Configs;
 import frc.o2026.Constants;
 import frc.o2026.RobotState;
-import frc.o2026.subsystems.drivebase.objectVision.ObjectCameraIO;
-import frc.o2026.subsystems.drivebase.objectVision.ObjectVision;
 import frc.robot.lib.BLine.FollowPath;
 import frc.robot.lib.BLine.Path;
 import frc.robot.lib.BLine.Path.PathElement;
 import frc.shared.Util;
-
+import frc.shared.hardware.vision.objectVision.ObjectCameraIO;
+import frc.shared.hardware.vision.objectVision.ObjectVision;
 import java.util.List;
 import java.util.Optional;
-import java.util.function.Supplier;
 import org.littletonrobotics.junction.Logger;
 
 public class Swerve extends SubsystemBase {
 
   private SwerveIO m_io;
-
   private ObjectVision m_objectDetection;
 
-  private boolean m_fieldCentricity = true;
+  private Optional<Rotation2d> m_odDirection = Optional.empty();
+
+  private boolean m_fieldCentricity = false;
 
   FollowPath.Builder m_pathBuilder;
 
-  private PIDController m_xController = new PIDController(2, 0, 0);
-  private PIDController m_yController = new PIDController(2, 0, 0);
+  private PIDController m_xController = new PIDController(5, 0, 0.3);
+  private PIDController m_yController = new PIDController(5, 0, 0.3);
   private PIDController m_rotController = new PIDController(4, 0.0, 0.5);
 
   public Swerve(SwerveIO io, ObjectCameraIO odIo) {
@@ -63,11 +62,9 @@ public class Swerve extends SubsystemBase {
 
     m_rotController.enableContinuousInput(-Math.PI, Math.PI);
     m_rotController.setTolerance(Units.degreesToRadians(5.0));
-
-    m_xController.setTolerance(0.01);
+    m_xController.setTolerance(0.05);
     m_xController.disableContinuousInput();
-
-    m_yController.setTolerance(0.01);
+    m_yController.setTolerance(0.05);
     m_yController.disableContinuousInput();
 
     RobotConfig config;
@@ -82,12 +79,15 @@ public class Swerve extends SubsystemBase {
 
     // Configure the AutoBuilder
     AutoBuilder.configure(
-        () -> m_io.getPose(),
-        (pose) -> m_io.resetPose(pose),
+        m_io::getPose,
+        m_io::resetPose,
         // ChassisSpeeds supplier. MUST BE ROBOT RELATIVE
-        () -> m_io.getSpeeds(),
+        m_io::getSpeeds,
         // Method that will drive the robot given ROBOT RELATIVE ChassisSpeeds.
-        (speeds, feedforwards) -> m_io.driveRobotRelative(speeds),
+        (speeds, feedforwards) -> {
+          m_fieldCentricity = false;
+          setState(m_desiredState.with(speeds));
+        },
         new PPHolonomicDriveController(
             // Translation PID constants
             new PIDConstants(1.0, 0.0, 0.0),
@@ -111,25 +111,6 @@ public class Swerve extends SubsystemBase {
             .withShouldFlip(Util::isRed);
   }
 
-  @Override
-  public void periodic() {
-
-    m_io.periodic();
-
-    RobotState.setLastMeasuredSpeeds(getChassisSpeeds());
-    RobotState.setPoseEst(getPose());
-
-    Logger.recordOutput("Swerve/fieldCentric", m_fieldCentricity);
-    Logger.recordOutput("Swerve/m-speeds", getChassisSpeeds());
-    Logger.recordOutput("Swerve/m-states", m_io.getModuleStates());
-    Logger.recordOutput("Swerve/m-speeds", getChassisSpeeds());
-    Logger.recordOutput("Swerve/m-pose", getPose());
-    Logger.recordOutput("Swerve/m-heading", getHeading().getDegrees());
-    Logger.recordOutput("Swerve/m-aimed", isAimed());
-
-    Logger.recordOutput("Swerve/d-aimed", Radians.of(m_rotController.getSetpoint()).in(Degrees));
-  }
-
   public ChassisSpeeds getChassisSpeeds() {
 
     return Constants.Chassis.Kinematics.toChassisSpeeds(m_io.getModuleStates());
@@ -145,20 +126,146 @@ public class Swerve extends SubsystemBase {
     return m_io.getGyroHeading();
   }
 
-  public void resetPose(Pose2d pose) {
+  public void setState(DesiredState desiredState) {
 
-    m_io.resetPose(pose);
+    m_desiredState = desiredState;
+  }
 
-    Logger.recordOutput("lastResetPose", pose);
+  public static enum DesiredState {
+    driveField,
+    driveRobot,
+    driveDefault,
+    pidPose,
+    aim,
+    aimSOTM,
+    intakeAssist,
+    hardStop,
+    idle;
+
+    public ChassisSpeeds speeds = new ChassisSpeeds();
+    public Rotation2d rotationTarget = new Rotation2d();
+    public Pose2d poseTarget = new Pose2d();
+
+    public DesiredState with(ChassisSpeeds speeds) {
+      this.speeds = speeds;
+      return this;
+    }
+
+    public DesiredState with(Rotation2d rotationTarget) {
+      this.rotationTarget = rotationTarget;
+      return this;
+    }
+
+    public DesiredState with(Pose2d poseTarget) {
+      this.poseTarget = poseTarget;
+      return this;
+    }
+  }
+
+  private DesiredState m_desiredState = DesiredState.idle;
+
+  @Override
+  public void periodic() {
+
+    m_io.periodic();
+
+    switch (m_desiredState) {
+      case driveField:
+        drive(m_desiredState.speeds, true);
+        break;
+
+      case driveRobot:
+        drive(m_desiredState.speeds, false);
+        break;
+
+      case driveDefault:
+        drive(m_desiredState.speeds, m_fieldCentricity);
+        break;
+
+      case pidPose:
+        var measure = RobotState.getPoseEst().toPose2d();
+        drive(
+            new ChassisSpeeds(
+                m_xController.calculate(measure.getX(), m_desiredState.poseTarget.getX()),
+                m_yController.calculate(measure.getY(), m_desiredState.poseTarget.getY()),
+                m_rotController.calculate(
+                    measure.getRotation().getRadians(),
+                    m_desiredState.poseTarget.getRotation().getRadians())),
+            true);
+        break;
+
+      case aim:
+        drive(
+            new ChassisSpeeds(
+                m_desiredState.speeds.vxMetersPerSecond,
+                m_desiredState.speeds.vyMetersPerSecond,
+                m_rotController.calculate(
+                    m_io.getGyroHeading().getRadians(),
+                    m_desiredState.rotationTarget.getRadians())),
+            false);
+        break;
+
+      case intakeAssist:
+        if (m_odDirection.isEmpty()) m_odDirection = m_objectDetection.directionToObject();
+
+        var assistSpeeds =
+            new Translation2d(Configs.Chassis.IntakeAssistSpeed.in(MetersPerSecond), 0.0)
+                .rotateBy(getHeading());
+        if (m_odDirection.isPresent())
+          drive(
+              new ChassisSpeeds(
+                  m_desiredState.speeds.vxMetersPerSecond + assistSpeeds.getX(),
+                  m_desiredState.speeds.vyMetersPerSecond + assistSpeeds.getY(),
+                  m_desiredState.speeds.omegaRadiansPerSecond
+                      + m_rotController.calculate(
+                              m_io.getGyroHeading().getRadians(),
+                              m_odDirection
+                                  .get()
+                                  .getMeasure()
+                                  .plus(
+                                      Constants.Vision.FrontCamConfig.offset()
+                                          .getRotation()
+                                          .getMeasureZ())
+                                  .in(Radians))
+                          * Configs.Chassis.IntakeAssistRotationPower),
+              m_fieldCentricity);
+        break;
+
+      case hardStop:
+        m_io.setModuleStates(Constants.Chassis.XishStates.toArray(SwerveModuleState[]::new));
+        break;
+
+      default:
+        break;
+    }
+
+    if (m_desiredState != DesiredState.intakeAssist) m_odDirection = Optional.empty();
+
+    RobotState.setLastMeasuredSpeeds(getChassisSpeeds());
+    RobotState.setPoseEst(getPose());
+
+    Logger.recordOutput("Swerve/fieldCentric", m_fieldCentricity);
+    Logger.recordOutput("Swerve/d-state", m_desiredState.toString());
+    Logger.recordOutput("Swerve/m-speeds", getChassisSpeeds());
+    Logger.recordOutput("Swerve/m-states", m_io.getModuleStates());
+    Logger.recordOutput("Swerve/m-speeds", getChassisSpeeds());
+    Logger.recordOutput("Swerve/m-pose", getPose());
+    Logger.recordOutput("Swerve/m-heading", getHeading().getDegrees());
+    Logger.recordOutput("Swerve/m-aimed", isAimed());
+    Logger.recordOutput("Swerve/m-isPID", isAtPidPose());
+
+    Logger.recordOutput("Swerve/d-aimed", Radians.of(m_rotController.getSetpoint()).in(Degrees));
   }
 
   private void drive(ChassisSpeeds speeds, boolean fieldRelative) {
 
+    Rotation2d driveHeading =
+        m_desiredState == DesiredState.pidPose
+            ? getHeading()
+            : (Util.isRed() ? getHeading() : getHeading().plus(Rotation2d.k180deg));
+
     var desiredStates =
-        fieldRelative
-            ? ChassisSpeeds.fromFieldRelativeSpeeds(
-                speeds, (Util.isRed() ? getHeading() : getHeading().plus(Rotation2d.k180deg)))
-            : speeds;
+        fieldRelative ? ChassisSpeeds.fromFieldRelativeSpeeds(speeds, driveHeading) : speeds;
 
     m_io.driveRobotRelative(desiredStates);
 
@@ -167,22 +274,31 @@ public class Swerve extends SubsystemBase {
         "d-states", Constants.Chassis.Kinematics.toSwerveModuleStates(desiredStates));
   }
 
+  public void resetPose(Pose2d pose) {
+
+    m_io.resetPose(pose);
+  }
+
+  public boolean isAtPidPose() {
+
+    return m_xController.atSetpoint() && m_yController.atSetpoint() && m_rotController.atSetpoint();
+  }
+
+  public boolean isAimed() {
+
+    return m_rotController.atSetpoint();
+  }
+
+  public boolean hasObjects() {
+
+    return m_objectDetection.hasObjects();
+  }
+
+  // Disgusting false commands that desecrate the power of my almighty state machine
+
   public Command resetPoseCmd(Pose2d pose) {
 
     return runOnce(() -> resetPose(pose));
-  }
-
-  public Command drive(Supplier<ChassisSpeeds> speedsSupplier, boolean fieldCentric) {
-
-    return run(() -> {
-          drive(speedsSupplier.get(), fieldCentric);
-        })
-        .withName("Drive");
-  }
-
-  public Command drive(Supplier<ChassisSpeeds> speedsSupplier) {
-
-    return drive(speedsSupplier, m_fieldCentricity);
   }
 
   public Command ppPathPose(Pose2d pose) {
@@ -194,17 +310,22 @@ public class Swerve extends SubsystemBase {
 
   public Command ppPathPoses(List<Pose2d> poses) {
 
-    var speed =
-        Math.hypot(getChassisSpeeds().vxMetersPerSecond, getChassisSpeeds().vyMetersPerSecond);
-    // Build and return the command
-    return AutoBuilder.pathfindThenFollowPath(
-        new PathPlannerPath(
-            PathPlannerPath.waypointsFromPoses(poses),
-            Configs.Chassis.constraints,
-            new IdealStartingState(speed, getHeading()),
-            new GoalEndState(0.0, poses.get(poses.size() - 1).getRotation())),
-        Configs.Chassis.constraints // Goal end velocity in m/s
-        );
+    return defer(
+        () -> {
+          var speed =
+              Math.hypot(
+                  getChassisSpeeds().vxMetersPerSecond, getChassisSpeeds().vyMetersPerSecond);
+
+          // Build and return the command
+          return AutoBuilder.pathfindThenFollowPath(
+              new PathPlannerPath(
+                  PathPlannerPath.waypointsFromPoses(poses),
+                  Configs.Chassis.constraints,
+                  new IdealStartingState(speed, getHeading()),
+                  new GoalEndState(0.0, poses.get(poses.size() - 1).getRotation())),
+              Configs.Chassis.constraints // Goal end velocity in m/s
+              );
+        });
   }
 
   public Command bLinePathPose(Pose2d pose) {
@@ -214,206 +335,12 @@ public class Swerve extends SubsystemBase {
 
   public Command bLinePathPoses(List<Pose2d> poses) {
 
-    return m_pathBuilder.build(
-        new Path(poses.stream().map(Path.Waypoint::new).map(pose -> (PathElement) pose).toList()));
-  }
-
-  public Command pidPathPose(Supplier<Pose2d> target) {
-
-    return run(() -> {
-          var currPose = getPose().toPose2d();
-          var targetPose =
-              Util.isRed() ? FlippingUtil.flipFieldPose(target.get()) : target.get();
-          Logger.recordOutput("pid target", targetPose);
-
-          var speeds =
-              new ChassisSpeeds(
-                  MathUtil.clamp(
-                      -m_xController.calculate(currPose.getX(), targetPose.getX()),
-                      -Configs.Chassis.constraints.maxVelocityMPS(),
-                      Configs.Chassis.constraints.maxVelocityMPS()),
-                  MathUtil.clamp(
-                      -m_yController.calculate(currPose.getY(), targetPose.getY()),
-                      -Configs.Chassis.constraints.maxVelocityMPS(),
-                      Configs.Chassis.constraints.maxVelocityMPS()),
-                  MathUtil.clamp(
-                      m_rotController.calculate(
-                          currPose.getRotation().getRadians(),
-                          targetPose.getRotation().getRadians()),
-                      -Configs.Chassis.constraints.maxVelocityMPS(),
-                      Configs.Chassis.constraints.maxVelocityMPS()));
-
-          drive(speeds, true);
-        })
-        .until(
-            () ->
-                m_xController.atSetpoint()
-                    && m_yController.atSetpoint()
-                    && m_rotController.atSetpoint())
-        .andThen(runOnce(() -> drive(new ChassisSpeeds(), m_fieldCentricity)));
-  }
-
-  public Command aimShoot() {
-
-    return aim(() -> RobotState.getSOTMRotTarget()).withName("AimSOTM");
-  }
-
-  public Command aimSOTM(Supplier<ChassisSpeeds> speeds) {
-
-    return aimMove(
-            () -> speeds.get().div(8), () -> Optional.of(RobotState.getSOTMRotTarget()), false)
-        .withName("AimSOTM");
-  }
-
-  public Command aim(Rotation2d angle) {
-
-    return run(() -> {
-          drive(
-              new ChassisSpeeds(
-                  0.0,
-                  0.0,
-                  m_rotController.calculate(
-                      m_io.getGyroHeading().getRadians(), angle.getRadians())),
-              false);
-        })
-        .until(() -> m_rotController.atSetpoint())
-        .andThen(runOnce(() -> drive(new ChassisSpeeds(), m_fieldCentricity)))
-        .withName("Aim");
-  }
-
-  public Command aim(Supplier<Rotation2d> angle) {
-
-    return run(() -> {
-          drive(
-              new ChassisSpeeds(
-                  0.0,
-                  0.0,
-                  m_rotController.calculate(
-                      m_io.getGyroHeading().getRadians(), angle.get().getRadians())),
-              false);
-        })
-        .until(() -> m_rotController.atSetpoint())
-        .andThen(runOnce(() -> drive(new ChassisSpeeds(), m_fieldCentricity)))
-        .withName("Aim");
-  }
-
-  public Command aimMove(
-      Supplier<ChassisSpeeds> speedsSupplier,
-      Supplier<Optional<Rotation2d>> angleSupplier,
-      boolean moveWhenAimed) {
-
-    return aimMove(speedsSupplier, angleSupplier, moveWhenAimed, m_fieldCentricity);
-  }
-
-  public Command aimMove(
-      Supplier<ChassisSpeeds> speedsSupplier,
-      Supplier<Optional<Rotation2d>> angleSupplier,
-      boolean moveWhenAimed,
-      boolean fieldCentric) {
-
-    return run(() -> {
-          var angle = angleSupplier.get();
-          drive(
-              new ChassisSpeeds(
-                  moveWhenAimed
-                      ? (isAimed() ? speedsSupplier.get().vxMetersPerSecond : 0.0)
-                      : speedsSupplier.get().vxMetersPerSecond,
-                  moveWhenAimed
-                      ? (isAimed() ? speedsSupplier.get().vyMetersPerSecond : 0.0)
-                      : speedsSupplier.get().vyMetersPerSecond,
-                  m_rotController.calculate(
-                      m_io.getGyroHeading().getRadians(),
-                      angle.orElseGet(Rotation2d::new).getRadians())),
-              fieldCentric);
-        })
-        .withName("AimMove");
-  }
-
-  public Command targetAssistedDrive(Supplier<ChassisSpeeds> speedsSupplier) {
-
-    return targetAssistedDrive(speedsSupplier, m_fieldCentricity);
-  }
-
-  public Command targetAssistedDrive(
-      Supplier<ChassisSpeeds> speedsSupplier, boolean fieldCentricity) {
-
-    PIDController aimController = m_rotController;
-
-    return run(() -> {
-          drive(
-              new ChassisSpeeds(
-                  speedsSupplier.get().vxMetersPerSecond,
-                  speedsSupplier.get().vyMetersPerSecond,
-                  speedsSupplier.get().omegaRadiansPerSecond
-                      + aimController.calculate(
-                              m_objectDetection.directionToObject().get().getRadians(), 0.0)
-                          * Configs.Chassis.AssistPower),
-              fieldCentricity);
-        })
-        .onlyIf(m_objectDetection::hasObjects)
-        .withName("AimAssistCHEATER");
-  }
-
-  public Command autoIntake() {
-
-    return aimMove(
-            () -> new ChassisSpeeds(-1.0, 0.0, 0.0),
-            () -> m_objectDetection.directionToObject().map(rot -> rot.plus(Rotation2d.k180deg)),
-            false,
-            false)
-        .onlyWhile(m_objectDetection::hasObjects);
-  }
-
-  public Command crossTrench() {
-
     return defer(
         () -> {
-          var translation = getPose().getTranslation().toTranslation2d();
-
-          var pair =
-              Constants.Field.BlueTrenchEntrances.getFirst()
-                          .getFirst()
-                          .plus(Constants.Field.BlueTrenchEntrances.getFirst().getSecond())
-                          .div(2.0)
-                          .getDistance(translation)
-                      < Constants.Field.BlueTrenchEntrances.getSecond()
-                          .getFirst()
-                          .plus(Constants.Field.BlueTrenchEntrances.getSecond().getSecond())
-                          .div(2.0)
-                          .getDistance(translation)
-                  ? Constants.Field.BlueTrenchEntrances.getFirst()
-                  : Constants.Field.BlueTrenchEntrances.getSecond();
-
-          Translation2d entry;
-          Translation2d exit;
-
-          if (pair.getFirst().getDistance(translation)
-              < pair.getSecond().getDistance(translation)) {
-            entry = pair.getFirst();
-            exit = pair.getSecond();
-          } else {
-            entry = pair.getSecond();
-            exit = pair.getFirst();
-          }
-
-          Rotation2d nearestCrossRot =
-              getHeading().getDegrees() > 0
-                  ? (getHeading().getDegrees() > 135 ? Rotation2d.k180deg : Rotation2d.kCCW_90deg)
-                  : (getHeading().getDegrees() > -45 ? Rotation2d.kZero : Rotation2d.kCW_90deg);
-
-          return bLinePathPoses(
-              List.of(new Pose2d(entry, nearestCrossRot), new Pose2d(exit, nearestCrossRot)));
+          return m_pathBuilder.build(
+              new Path(
+                  poses.stream().map(Path.Waypoint::new).map(pose -> (PathElement) pose).toList()));
         });
-  }
-
-  public boolean isAimed() {
-
-    return m_rotController.atSetpoint();
-  }
-
-  public boolean hasObjects() {
-
-    return m_objectDetection.hasObjects();
   }
 
   public Command resetGyro() {
@@ -429,15 +356,16 @@ public class Swerve extends SubsystemBase {
   }
 
   public Command fieldCentricityOn() {
-    return runOnce(() -> m_fieldCentricity = true).withName("Field Centricity On");
+    return runOnce(() -> m_fieldCentricity = true).withName("Field Centricity On").asProxy();
   }
 
   public Command toggleFieldCentricity() {
     return runOnce(() -> m_fieldCentricity = !m_fieldCentricity)
-        .withName("Field Centricity Toggle");
+        .withName("Field Centricity Toggle")
+        .asProxy();
   }
 
   public Command fieldCentricityOff() {
-    return runOnce(() -> m_fieldCentricity = false).withName("Field Centricity Off");
+    return runOnce(() -> m_fieldCentricity = false).withName("Field Centricity Off").asProxy();
   }
 }
