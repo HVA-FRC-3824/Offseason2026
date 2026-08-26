@@ -7,10 +7,11 @@
 package frc.o2026.subsystems.drivebase;
 
 import edu.wpi.first.math.geometry.Pose2d;
-import edu.wpi.first.math.geometry.Rotation2d;
+import edu.wpi.first.math.geometry.Pose3d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.kinematics.SwerveModulePosition;
 import edu.wpi.first.math.kinematics.SwerveModuleState;
+import org.littletonrobotics.junction.AutoLog;
 
 public interface SwerveIO {
 
@@ -24,23 +25,20 @@ public interface SwerveIO {
   //      | 2      3 |                 |
   //   BL +----------+ BR              |
 
-  public void driveRobotRelative(ChassisSpeeds speeds);
+  @AutoLog
+  public static class SwerveIOInputs {
 
-  public void setModuleStates(SwerveModuleState[] states);
+    public SwerveModuleState[] moduleStates = new SwerveModuleState[4];
+    public SwerveModulePosition[] modulePositions = new SwerveModulePosition[4];
+    public ChassisSpeeds speeds = new ChassisSpeeds();
+    public Pose3d pose = new Pose3d();
+  }
 
-  public SwerveModuleState[] getModuleStates();
+  public default void updateInputs(SwerveIOInputs inputs) {}
 
-  public SwerveModulePosition[] getModulePositions();
-
-  public ChassisSpeeds getSpeeds();
-
-  public Pose2d getPose();
-
-  public void resetPose(Pose2d newPos);
-
+  public default void driveRobotRelative(ChassisSpeeds speeds) {}
+  public default void setModuleStates(SwerveModuleState[] states) {}
+  public default void resetPose(Pose2d newPos) {}
   public default void resetGyro() {}
-
-  public void periodic();
-
-  public Rotation2d getGyroHeading();
+  public default void periodic() {}
 }

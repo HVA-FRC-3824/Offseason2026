@@ -22,6 +22,7 @@ import frc.o2026.Constants;
 import frc.o2026.RobotState;
 import frc.shared.Util;
 import frc.shared.hardware.motor.MotorIO;
+import frc.shared.hardware.motor.MotorInputsAutoLogged;
 import frc.shared.hardware.motor.MotorIO.MotorInputs;
 import frc.shared.rebuilt.BallSim;
 import frc.shared.rebuilt.firecontrol.ProjectileSimulator;
@@ -47,7 +48,7 @@ public class Flywheel extends SubsystemBase {
   private MotorIO m_teacherIO;
   private MotorIO m_studentIO;
 
-  private MotorInputs m_ioInputs = new MotorInputs();
+  private MotorInputsAutoLogged m_ioInputs = new MotorInputsAutoLogged();
 
   private ShotCalculator m_shotCalc;
 
@@ -133,8 +134,8 @@ public class Flywheel extends SubsystemBase {
                     RobotState.getLastMeasuredSpeeds(), pose.getRotation()),
                 RobotState.getLastMeasuredSpeeds(),
                 Util.isRed()
-                  ? Constants.Field.RedHub.getTranslation().toTranslation2d()
-                  : Constants.Field.BlueHub.getTranslation().toTranslation2d(),
+                    ? Constants.Field.RedHub.getTranslation().toTranslation2d()
+                    : Constants.Field.BlueHub.getTranslation().toTranslation2d(),
                 Constants.Field.HubForward,
                 0.9, // vision confidence, 0 to 1
                 rot.getMeasureY().in(Degrees),

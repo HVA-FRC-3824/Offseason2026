@@ -37,11 +37,11 @@ import java.util.List;
 
 public final class Constants {
 
-    
   public static enum Robot {
     Real,
     DevBot,
-    Sim
+    Sim,
+    Replay
   }
 
   public static final Robot Impl = Robot.DevBot;

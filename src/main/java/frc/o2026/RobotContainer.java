@@ -6,6 +6,8 @@
 
 package frc.o2026;
 
+import static edu.wpi.first.units.Units.Inches;
+
 import com.pathplanner.lib.auto.AutoBuilder;
 import com.pathplanner.lib.auto.NamedCommands;
 import com.pathplanner.lib.events.EventTrigger;
@@ -13,6 +15,7 @@ import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.filter.SlewRateLimiter;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
+import edu.wpi.first.units.measure.Angle;
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
@@ -26,6 +29,7 @@ import frc.o2026.subsystems.Intake;
 import frc.o2026.subsystems.Roller;
 import frc.o2026.subsystems.Roller.RollerDesiredState;
 import frc.o2026.subsystems.drivebase.Swerve;
+import frc.o2026.subsystems.drivebase.SwerveIO;
 import frc.o2026.subsystems.drivebase.SwerveIOReal;
 import frc.o2026.subsystems.drivebase.SwerveIOSim;
 import frc.o2026.subsystems.drivebase.SwerveModule;
@@ -37,16 +41,16 @@ import frc.shared.hardware.motor.ctre.MotorIOFlywheelSim;
 import frc.shared.hardware.motor.ctre.MotorIOSim;
 import frc.shared.hardware.motor.ctre.MotorIOTalonFX;
 import frc.shared.hardware.motor.rev.MotorIOSparkMax;
+import frc.shared.hardware.vision.objectVision.ObjectCameraIO;
 import frc.shared.hardware.vision.objectVision.ObjectCameraIOPhoton;
 import frc.shared.hardware.vision.objectVision.ObjectCameraIOSim;
 import frc.shared.hardware.vision.poseVision.PoseCameraIOLimelight;
 import frc.shared.hardware.vision.poseVision.PoseCameraIOPhoton;
 import frc.shared.hardware.vision.poseVision.PoseCameraIOSim;
 
-import static edu.wpi.first.units.Units.Inches;
-
+import java.util.Optional;
+import java.util.Set;
 import java.util.function.Supplier;
-
 import org.ironmaple.simulation.SimulatedArena;
 
 public class RobotContainer extends SubsystemBase {
@@ -114,13 +118,12 @@ public class RobotContainer extends SubsystemBase {
                             Constants.CanIds.BackLeftTurnId, Configs.Chassis.TurnConfig),
                         Constants.CanIds.BackLeftEncoderId,
                         Constants.Chassis.BackLeftForwardsAngle),
-                    new GyroIOPigeon(Constants.CanIds.PigeonGyroId)//,
+                    new GyroIOPigeon(Constants.CanIds.PigeonGyroId) // ,
                     // new PoseCameraIOPhoton(Constants.Vision.FrontCamConfig),
                     // new PoseCameraIOPhoton(Constants.Vision.WebCam),
                     // new PoseCameraIOLimelight(Constants.Vision.LimelightOfDoomAndDespair)
-                ),
-                new ObjectCameraIOPhoton(
-                    Constants.Vision.BackCamConfig, Inches.of(3.0)));
+                    ),
+                new ObjectCameraIOPhoton(Constants.Vision.BackCamConfig, Inches.of(3.0)));
 
         m_roller =
             new Roller(
@@ -183,8 +186,7 @@ public class RobotContainer extends SubsystemBase {
                     new PoseCameraIOPhoton(Constants.Vision.FrontCamConfig),
                     new PoseCameraIOPhoton(Constants.Vision.WebCam),
                     new PoseCameraIOLimelight(Constants.Vision.LimelightOfDoomAndDespair)),
-                new ObjectCameraIOPhoton(
-                    Constants.Vision.BackCamConfig, Inches.of(3.0)));
+                new ObjectCameraIOPhoton(Constants.Vision.BackCamConfig, Inches.of(3.0)));
 
         m_roller = new Roller(new MotorIONothing());
 
@@ -195,14 +197,15 @@ public class RobotContainer extends SubsystemBase {
         m_flywheel = new Flywheel(new MotorIONothing(), new MotorIONothing());
         break;
 
-      default:
+      case Sim:
         m_swerve =
             new Swerve(
                 new SwerveIOSim(
                     new PoseCameraIOSim(Constants.Vision.FrontCamConfig),
                     new PoseCameraIOSim(Constants.Vision.WebCam),
                     new PoseCameraIOSim(Constants.Vision.LimelightOfDoomAndDespair)),
-                new ObjectCameraIOSim(Constants.Vision.BackCamConfig, SimulatedArena.getInstance()));
+                new ObjectCameraIOSim(
+                    Constants.Vision.BackCamConfig, SimulatedArena.getInstance()));
 
         m_roller =
             new Roller(
@@ -266,16 +269,81 @@ public class RobotContainer extends SubsystemBase {
                     2,
                     Constants.SimModels.FlywheelGearRatio));
         break;
+
+        default:
+        m_swerve =
+            new Swerve(
+                new SwerveIO() {
+                    
+                },
+                new ObjectCameraIO() {
+                    
+                });
+
+        m_roller = new Roller(new MotorIONothing());
+
+        m_indexer =
+            new Indexer(
+                new MotorIOSim(
+                    Constants.CanIds.IndexerMotorId,
+                    Configs.Indexer.BeltConfig,
+                    true,
+                    Constants.SimModels.IndexerMOI,
+                    1,
+                    Constants.SimModels.IndexerGearRatio),
+                new MotorIOSim(
+                    Constants.CanIds.KickerMotorId,
+                    Configs.Indexer.KickerConfig,
+                    true,
+                    Constants.SimModels.IndexerMOI,
+                    1,
+                    Constants.SimModels.IndexerGearRatio));
+
+        m_intake =
+            new Intake(
+                new MotorIOSim(
+                    Constants.CanIds.IntakePositionLeaderMotorId,
+                    Configs.Intake.PivotConfig,
+                    true,
+                    Constants.SimModels.IntakeMOI,
+                    2,
+                    Constants.SimModels.IntakeGearRatio),
+                new MotorIOSim(
+                    Constants.CanIds.IntakePositionFollowerMotorId,
+                    Configs.Intake.PivotConfig,
+                    true,
+                    Constants.SimModels.IntakeMOI,
+                    2,
+                    Constants.SimModels.IntakeGearRatio));
+
+        // Both sims use 2 motors to simulate the effects of the other motor
+        m_flywheel =
+            new Flywheel(
+                new MotorIOFlywheelSim(
+                    Constants.CanIds.FlywheelMotorId,
+                    Configs.Flywheel.Config,
+                    true,
+                    Constants.SimModels.FlywheelMOI,
+                    2,
+                    Constants.SimModels.FlywheelGearRatio),
+                new MotorIOFlywheelSim(
+                    Constants.CanIds.FlywheelFollowerMotorId,
+                    Configs.Flywheel.Config,
+                    true,
+                    Constants.SimModels.FlywheelMOI,
+                    2,
+                    Constants.SimModels.FlywheelGearRatio));
+        break;
     }
 
     // COMMAND CREATORS
 
     shootCmd =
-      () ->
-          Commands.parallel(
-              m_flywheel.auto(),
-              m_indexer.on().onlyWhile(() -> m_flywheel.isReady() && m_swerve.isAimed()),
-              m_intake.stowed());
+        () ->
+            Commands.parallel(
+                m_flywheel.auto(),
+                m_indexer.on().onlyWhile(() -> m_flywheel.isReady() && m_swerve.isAimed()),
+                m_intake.stowed());
 
     // AUTOS
 
@@ -284,8 +352,9 @@ public class RobotContainer extends SubsystemBase {
 
     // DEFAULT COMMANDS
 
-    m_swerve.setDefaultCommand(m_swerve.runOnce(() -> 
-        m_swerve.setState(Swerve.DesiredState.driveDefault.with(getSpeeds()))));
+    m_swerve.setDefaultCommand(
+        m_swerve.runOnce(
+            () -> m_swerve.setState(Swerve.DesiredState.driveDefault.with(getSpeeds()))));
     m_flywheel.setDefaultCommand(m_flywheel.off());
     m_indexer.setDefaultCommand(m_indexer.off());
     m_roller.setDefaultCommand(m_roller.setState(RollerDesiredState.off));
@@ -298,10 +367,13 @@ public class RobotContainer extends SubsystemBase {
     m_driver
         .rightTrigger()
         .whileTrue(
-            shootCmd.get()
-            .alongWith(
-                m_swerve.run(() -> 
-                    m_swerve.setState(Swerve.DesiredState.intakeAssist.with(getSpeeds())))));
+            shootCmd
+                .get()
+                .alongWith(
+                    m_swerve.run(
+                        () ->
+                            m_swerve.setState(
+                                Swerve.DesiredState.intakeAssist.with(getSpeeds())))));
 
     m_driver
         .leftTrigger()
@@ -309,13 +381,16 @@ public class RobotContainer extends SubsystemBase {
             Commands.parallel(
                 m_intake.deploy(),
                 m_roller.setState(RollerDesiredState.on),
-                m_swerve.run(() -> m_swerve.setState(Swerve.DesiredState.intakeAssist.with(getSpeeds())))));
-
+                m_swerve.run(
+                    () -> m_swerve.setState(Swerve.DesiredState.intakeAssist.with(getSpeeds())))));
 
     // SmartDashboard.putData("yUp", m_swerve.drive(() -> new ChassisSpeeds(-0.5, 0.0, 0.0), true));
-    // SmartDashboard.putData("yDown", m_swerve.drive(() -> new ChassisSpeeds(0.5, 0.0, 0.0), true));
-    // SmartDashboard.putData("xLeft", m_swerve.drive(() -> new ChassisSpeeds(0.0, -0.5, 0.0), true));
-    // SmartDashboard.putData("xRight", m_swerve.drive(() -> new ChassisSpeeds(0.0, 0.5, 0.0), true));
+    // SmartDashboard.putData("yDown", m_swerve.drive(() -> new ChassisSpeeds(0.5, 0.0, 0.0),
+    // true));
+    // SmartDashboard.putData("xLeft", m_swerve.drive(() -> new ChassisSpeeds(0.0, -0.5, 0.0),
+    // true));
+    // SmartDashboard.putData("xRight", m_swerve.drive(() -> new ChassisSpeeds(0.0, 0.5, 0.0),
+    // true));
 
     // SmartDashboard.putData(
     //     "rotLeft", m_swerve.drive(() -> new ChassisSpeeds(0.0, 0.0, Math.PI / 2), true));
@@ -333,15 +408,24 @@ public class RobotContainer extends SubsystemBase {
             m_swerve.defer(
                 () -> {
                   return Commands.race(
-                      m_swerve.run(() -> 
-                        m_swerve.setState(Swerve.DesiredState.aim.with(m_swerve.getHeading().plus(Rotation2d.k180deg)))).repeatedly(),
+                      m_swerve
+                          .run(
+                              () ->
+                                  m_swerve.setState(
+                                      Swerve.DesiredState.aim.with(
+                                          m_swerve.getHeading().plus(Rotation2d.k180deg))))
+                          .repeatedly(),
                       new WaitCommand(10));
                 }));
 
     // PATHING COMMANDS & TRIGGERS
 
     NamedCommands.registerCommand(
-        "ShootAll", shootCmd.get().repeatedly().alongWith(m_swerve.run(() -> m_swerve.setState(Swerve.DesiredState.aimSOTM))));
+        "ShootAll",
+        shootCmd
+            .get()
+            .repeatedly()
+            .alongWith(m_swerve.run(() -> m_swerve.setState(Swerve.DesiredState.aimSOTM))));
 
     new EventTrigger("DeployIntake")
         .onTrue(m_intake.deploy().andThen(m_roller.setState(RollerDesiredState.on)));

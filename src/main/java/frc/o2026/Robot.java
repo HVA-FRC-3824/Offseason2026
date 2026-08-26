@@ -14,9 +14,12 @@ import frc.shared.hardware.SimBattery;
 import frc.shared.hardware.motor.ctre.OrchestraOrchestrator;
 import frc.shared.rebuilt.BallSim;
 import org.ironmaple.simulation.SimulatedArena;
+import org.littletonrobotics.junction.LogFileUtil;
 import org.littletonrobotics.junction.LoggedRobot;
 import org.littletonrobotics.junction.Logger;
 import org.littletonrobotics.junction.networktables.NT4Publisher;
+import org.littletonrobotics.junction.wpilog.WPILOGReader;
+import org.littletonrobotics.junction.wpilog.WPILOGWriter;
 
 public class Robot extends LoggedRobot {
 
@@ -26,9 +29,16 @@ public class Robot extends LoggedRobot {
 
   public Robot() {
 
-    Logger.addDataReceiver(new NT4Publisher());
-    Logger.start();
-    
+    if (Constants.Impl != Constants.Robot.Replay) {
+      Logger.addDataReceiver(new WPILOGWriter()); // Log to a USB stick ("/U/logs")
+      Logger.addDataReceiver(new NT4Publisher()); // Publish data to NetworkTables
+    } else {
+      setUseTiming(false); // Run as fast as possible
+      String logPath = LogFileUtil.findReplayLog(); // Pull the replay log from AdvantageScope (or prompt the user)
+      Logger.setReplaySource(new WPILOGReader(logPath)); // Read replay log
+      Logger.addDataReceiver(new WPILOGWriter(LogFileUtil.addPathSuffix(logPath, "_sim"))); // Save outputs to a new log
+    }
+
     m_robotContainer = new RobotContainer();
 
     OrchestraOrchestrator.sendChooser();

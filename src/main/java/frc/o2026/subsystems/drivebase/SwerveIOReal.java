@@ -18,7 +18,6 @@ import edu.wpi.first.math.kinematics.SwerveModulePosition;
 import edu.wpi.first.math.kinematics.SwerveModuleState;
 import frc.o2026.Constants;
 import frc.shared.hardware.gyro.GyroIO;
-import frc.shared.hardware.gyro.GyroIONavX;
 import frc.shared.hardware.vision.poseVision.PoseCameraIO;
 import frc.shared.hardware.vision.poseVision.PoseVision;
 import org.littletonrobotics.junction.Logger;
@@ -61,6 +60,8 @@ public class SwerveIOReal implements SwerveIO {
   private SwerveModule m_brSwerveModules;
   private SwerveModule m_blSwerveModules;
 
+  private SwerveModulePosition[] m_modulePositions = new SwerveModulePosition[4];
+
   private SwerveDrivePoseEstimator3d m_estimator;
 
   ChassisSpeeds m_desiredSpeeds = new ChassisSpeeds(0, 0, 0);
@@ -69,8 +70,6 @@ public class SwerveIOReal implements SwerveIO {
 
   private GyroIO m_gyroIO;
   private PoseVision m_vision;
-
-  private GyroIO m_GyroIO2 = new GyroIONavX();
 
   public SwerveIOReal(
       SwerveModule fr,
@@ -89,25 +88,38 @@ public class SwerveIOReal implements SwerveIO {
                     data.visionMeasurement(), data.timestampSeconds(), data.stdDevs()),
             cameras);
 
-    m_vision.addGyroResetter(m_gyroIO::reset);
-
     m_estimator =
         new SwerveDrivePoseEstimator3d(
             Constants.Chassis.Kinematics,
             m_gyroIO.getGyroRotation(), // Initial gyro angle
-            getModulePositions(),
+            m_modulePositions,
             new Pose3d(14.0, 7.0, 0.0, new Rotation3d(Rotation2d.k180deg)) // Initial pose
             );
   }
 
   @Override
+  public void updateInputs(SwerveIOInputs inputs) {
+
+    inputs.modulePositions[0] = m_flSwerveModules.getPosition();
+    inputs.modulePositions[1] = m_frSwerveModules.getPosition();
+    inputs.modulePositions[2] = m_blSwerveModules.getPosition();
+    inputs.modulePositions[3] = m_brSwerveModules.getPosition();
+    m_modulePositions = inputs.modulePositions;
+
+    inputs.moduleStates[0] = m_flSwerveModules.getState();
+    inputs.moduleStates[1] = m_frSwerveModules.getState();
+    inputs.moduleStates[2] = m_blSwerveModules.getState();
+    inputs.moduleStates[3] = m_brSwerveModules.getState();
+
+    inputs.pose = m_estimator.getEstimatedPosition();
+    inputs.speeds = Constants.Chassis.Kinematics.toChassisSpeeds(inputs.moduleStates);
+  }
+
+  @Override
   public void periodic() {
 
-    m_vision.update();
+    m_estimator.update(m_gyroIO.getGyroRotation(), m_modulePositions);
 
-    m_estimator.update(m_gyroIO.getGyroRotation(), getModulePositions());
-
-    Logger.recordOutput("Navx-Output ", m_GyroIO2.getGyroRotation().getMeasureZ().in(Degrees));
     Logger.recordOutput("Pidgeon-Output ", m_gyroIO.getGyroRotation().getMeasureZ().in(Degrees));
   }
 
@@ -128,49 +140,10 @@ public class SwerveIOReal implements SwerveIO {
     setModuleStates(desiredStates);
   }
 
-  public void setModuleStates(SwerveModuleState[] states) {
-    // Set the desired state for each swerve module
-    m_flSwerveModules.setDesiredState(states[0]);
-    m_frSwerveModules.setDesiredState(states[1]);
-    m_blSwerveModules.setDesiredState(states[2]);
-    m_brSwerveModules.setDesiredState(states[3]);
-  }
-
-  public SwerveModuleState[] getModuleStates() {
-    SwerveModuleState[] states = {
-      m_flSwerveModules.getState(),
-      m_frSwerveModules.getState(),
-      m_blSwerveModules.getState(),
-      m_brSwerveModules.getState()
-    };
-
-    return states;
-  }
-
-  public SwerveModulePosition[] getModulePositions() {
-    SwerveModulePosition[] positions = {
-      m_flSwerveModules.getPosition(),
-      m_frSwerveModules.getPosition(),
-      m_blSwerveModules.getPosition(),
-      m_brSwerveModules.getPosition()
-    };
-
-    return positions;
-  }
-
-  public ChassisSpeeds getSpeeds() {
-    return Constants.Chassis.Kinematics.toChassisSpeeds(getModuleStates());
-  }
-
-  @Override
-  public Pose2d getPose() {
-
-    return m_estimator.getEstimatedPosition().toPose2d();
-  }
-
   @Override
   public void resetPose(Pose2d newPos) {
 
+    m_gyroIO.reset();
     m_estimator.resetPose(new Pose3d(newPos));
   }
 
@@ -178,15 +151,16 @@ public class SwerveIOReal implements SwerveIO {
   public void resetGyro() {
 
     m_gyroIO.reset();
-    m_GyroIO2.reset();
 
     m_estimator.resetPose(
         new Pose3d(m_estimator.getEstimatedPosition().getTranslation(), new Rotation3d()));
   }
 
-  @Override
-  public Rotation2d getGyroHeading() {
-
-    return m_gyroIO.getGyroRotation().toRotation2d();
+  public void setModuleStates(SwerveModuleState[] states) {
+    // Set the desired state for each swerve module
+    m_flSwerveModules.setDesiredState(states[0]);
+    m_frSwerveModules.setDesiredState(states[1]);
+    m_blSwerveModules.setDesiredState(states[2]);
+    m_brSwerveModules.setDesiredState(states[3]);
   }
 }

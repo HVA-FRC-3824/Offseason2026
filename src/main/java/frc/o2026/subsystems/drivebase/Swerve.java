@@ -43,6 +43,8 @@ import org.littletonrobotics.junction.Logger;
 public class Swerve extends SubsystemBase {
 
   private SwerveIO m_io;
+  private SwerveIOInputsAutoLogged m_ioInputs = new SwerveIOInputsAutoLogged();
+
   private ObjectVision m_objectDetection;
 
   private Optional<Rotation2d> m_odDirection = Optional.empty();
@@ -79,10 +81,10 @@ public class Swerve extends SubsystemBase {
 
     // Configure the AutoBuilder
     AutoBuilder.configure(
-        m_io::getPose,
+        () -> m_ioInputs.pose.toPose2d(),
         m_io::resetPose,
         // ChassisSpeeds supplier. MUST BE ROBOT RELATIVE
-        m_io::getSpeeds,
+        () -> m_ioInputs.speeds,
         // Method that will drive the robot given ROBOT RELATIVE ChassisSpeeds.
         (speeds, feedforwards) -> {
           m_fieldCentricity = false;
@@ -101,8 +103,8 @@ public class Swerve extends SubsystemBase {
     m_pathBuilder =
         new FollowPath.Builder(
                 this,
-                m_io::getPose,
-                m_io::getSpeeds,
+                () -> m_ioInputs.pose.toPose2d(),
+                () -> m_ioInputs.speeds,
                 m_io::driveRobotRelative,
                 new PIDController(2.0, 0.3, 1.5),
                 new PIDController(4.0, 0.2, 0.1),
@@ -113,17 +115,17 @@ public class Swerve extends SubsystemBase {
 
   public ChassisSpeeds getChassisSpeeds() {
 
-    return Constants.Chassis.Kinematics.toChassisSpeeds(m_io.getModuleStates());
+    return Constants.Chassis.Kinematics.toChassisSpeeds(m_ioInputs.moduleStates);
   }
 
   public Pose3d getPose() {
 
-    return new Pose3d(m_io.getPose());
+    return m_ioInputs.pose;
   }
 
   public Rotation2d getHeading() {
 
-    return m_io.getGyroHeading();
+    return m_ioInputs.pose.getRotation().toRotation2d();
   }
 
   public void setState(DesiredState desiredState) {
@@ -167,6 +169,9 @@ public class Swerve extends SubsystemBase {
   @Override
   public void periodic() {
 
+    m_io.updateInputs(m_ioInputs);
+    Logger.processInputs("Swerve", m_ioInputs);
+
     m_io.periodic();
 
     switch (m_desiredState) {
@@ -200,8 +205,7 @@ public class Swerve extends SubsystemBase {
                 m_desiredState.speeds.vxMetersPerSecond,
                 m_desiredState.speeds.vyMetersPerSecond,
                 m_rotController.calculate(
-                    m_io.getGyroHeading().getRadians(),
-                    m_desiredState.rotationTarget.getRadians())),
+                    getHeading().getRadians(), m_desiredState.rotationTarget.getRadians())),
             false);
         break;
 
@@ -218,7 +222,7 @@ public class Swerve extends SubsystemBase {
                   m_desiredState.speeds.vyMetersPerSecond + assistSpeeds.getY(),
                   m_desiredState.speeds.omegaRadiansPerSecond
                       + m_rotController.calculate(
-                              m_io.getGyroHeading().getRadians(),
+                              getHeading().getRadians(),
                               m_odDirection
                                   .get()
                                   .getMeasure()
@@ -246,11 +250,6 @@ public class Swerve extends SubsystemBase {
 
     Logger.recordOutput("Swerve/fieldCentric", m_fieldCentricity);
     Logger.recordOutput("Swerve/d-state", m_desiredState.toString());
-    Logger.recordOutput("Swerve/m-speeds", getChassisSpeeds());
-    Logger.recordOutput("Swerve/m-states", m_io.getModuleStates());
-    Logger.recordOutput("Swerve/m-speeds", getChassisSpeeds());
-    Logger.recordOutput("Swerve/m-pose", getPose());
-    Logger.recordOutput("Swerve/m-heading", getHeading().getDegrees());
     Logger.recordOutput("Swerve/m-aimed", isAimed());
     Logger.recordOutput("Swerve/m-isPID", isAtPidPose());
 
@@ -349,7 +348,7 @@ public class Swerve extends SubsystemBase {
         () -> {
           var pose =
               new Pose2d(
-                  m_io.getPose().getMeasureX(), m_io.getPose().getMeasureY(), new Rotation2d());
+                  m_ioInputs.pose.getMeasureX(), m_ioInputs.pose.getMeasureY(), new Rotation2d());
           m_io.resetGyro();
           m_io.resetPose(pose);
         });
