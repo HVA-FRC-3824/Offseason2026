@@ -11,6 +11,7 @@ import edu.wpi.first.math.geometry.Pose3d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.kinematics.SwerveModulePosition;
 import edu.wpi.first.math.kinematics.SwerveModuleState;
+import frc.shared.hardware.vision.poseVision.PoseVision.VisionData;
 import org.littletonrobotics.junction.AutoLog;
 
 public interface SwerveIO {
@@ -28,8 +29,21 @@ public interface SwerveIO {
   @AutoLog
   public static class SwerveIOInputs {
 
-    public SwerveModuleState[] moduleStates = new SwerveModuleState[4];
-    public SwerveModulePosition[] modulePositions = new SwerveModulePosition[4];
+    public SwerveModuleState[] moduleStates =
+        new SwerveModuleState[] {
+          new SwerveModuleState(),
+          new SwerveModuleState(),
+          new SwerveModuleState(),
+          new SwerveModuleState()
+        };
+
+    public SwerveModulePosition[] modulePositions =
+        new SwerveModulePosition[] {
+          new SwerveModulePosition(),
+          new SwerveModulePosition(),
+          new SwerveModulePosition(),
+          new SwerveModulePosition()
+        };
     public ChassisSpeeds speeds = new ChassisSpeeds();
     public Pose3d pose = new Pose3d();
   }
@@ -37,8 +51,14 @@ public interface SwerveIO {
   public default void updateInputs(SwerveIOInputs inputs) {}
 
   public default void driveRobotRelative(ChassisSpeeds speeds) {}
+
   public default void setModuleStates(SwerveModuleState[] states) {}
+
+  public default void addVisionMeasurement(VisionData data) {}
+
   public default void resetPose(Pose2d newPos) {}
+
   public default void resetGyro() {}
+
   public default void periodic() {}
 }

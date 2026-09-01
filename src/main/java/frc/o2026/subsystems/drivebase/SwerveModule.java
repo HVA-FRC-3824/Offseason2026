@@ -21,21 +21,31 @@ import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.o2026.Constants;
 import frc.shared.hardware.motor.MotorIO;
 import frc.shared.hardware.motor.MotorIO.MotorInputs;
+import org.littletonrobotics.junction.Logger;
+import org.littletonrobotics.junction.inputs.LoggableInputs;
 
 public class SwerveModule extends SubsystemBase {
   private final MotorIO m_drivingMotor;
   private final MotorIO m_angleMotor;
   private final CANcoder m_angleAbsoluteEncoder;
 
-  private MotorInputs m_drivingMotorInputs;
-  private MotorInputs m_angleMotorInputs;
+  private MotorInputs m_drivingMotorInputs = new MotorInputs();
+  private MotorInputs m_angleMotorInputs = new MotorInputs();
+
+  private String m_moduleId;
 
   public SwerveModule(
-      MotorIO driveMotor, MotorIO angleMotor, int angleEncoderCanId, Angle angleOffset) {
+      String moduleId,
+      MotorIO driveMotor,
+      MotorIO angleMotor,
+      int angleEncoderCanId,
+      Angle angleOffset) {
 
     m_drivingMotor = driveMotor;
     m_angleMotor = angleMotor;
     m_angleAbsoluteEncoder = new CANcoder(angleEncoderCanId);
+
+    m_moduleId = moduleId;
 
     m_angleAbsoluteEncoder
         .getConfigurator()
@@ -53,6 +63,9 @@ public class SwerveModule extends SubsystemBase {
   public void periodic() {
     m_drivingMotor.updateInputs(m_drivingMotorInputs);
     m_angleMotor.updateInputs(m_angleMotorInputs);
+
+    Logger.processInputs(m_moduleId + "drive", (LoggableInputs) m_drivingMotorInputs);
+    Logger.processInputs(m_moduleId + "angle", (LoggableInputs) m_angleMotorInputs);
   }
 
   public void setDesiredState(SwerveModuleState desiredState) {

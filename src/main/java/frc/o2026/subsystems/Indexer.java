@@ -24,6 +24,19 @@ public class Indexer extends SubsystemBase {
     m_kickIO = kickIO;
   }
 
+  public static enum IndexerDesiredState {
+    off,
+    on,
+    backwards
+  }
+
+  private IndexerDesiredState m_desiredState = IndexerDesiredState.off;
+
+  public Command setState(IndexerDesiredState desiredState) {
+
+    return runOnce(() -> m_desiredState = desiredState);
+  }
+
   @Override
   public void periodic() {
 
@@ -31,35 +44,31 @@ public class Indexer extends SubsystemBase {
     m_kickIO.periodic();
 
     Logger.recordOutput("Sim/indexing", RobotState.isSimIndexing());
-  }
 
-  public Command off() {
+    switch (m_desiredState) {
+      case off:
+        RobotState.setSimIndexing(false);
+        m_beltIO.brake();
+        m_kickIO.brake();
 
-    return runOnce(
-        () -> {
-          RobotState.setSimIndexing(false);
-          m_beltIO.brake();
-          m_kickIO.brake();
-        });
-  }
+        break;
 
-  public Command on() {
+      case on:
+        RobotState.setSimIndexing(true);
+        m_beltIO.setVelocity(Configs.Indexer.BeltTurnsPerSec);
+        m_kickIO.setVelocity(Configs.Indexer.KickerWheelTurnsPerSec);
 
-    return runOnce(
-        () -> {
-          RobotState.setSimIndexing(true);
-          m_beltIO.setVelocity(Configs.Indexer.BeltTurnsPerSec);
-          m_kickIO.setVelocity(Configs.Indexer.KickerWheelTurnsPerSec);
-        });
-  }
+        break;
 
-  public Command backwards() {
+      case backwards:
+        RobotState.setSimIndexing(false);
+        m_beltIO.setVelocity(Configs.Indexer.BeltTurnsPerSec.times(-1.0));
+        m_kickIO.setVelocity(Configs.Indexer.KickerWheelTurnsPerSec.times(-1.0));
 
-    return runOnce(
-        () -> {
-          RobotState.setSimIndexing(false);
-          m_beltIO.setVelocity(Configs.Indexer.BeltTurnsPerSec.times(-1.0));
-          m_kickIO.setVelocity(Configs.Indexer.KickerWheelTurnsPerSec.times(-1.0));
-        });
+        break;
+
+      default:
+        break;
+    }
   }
 }

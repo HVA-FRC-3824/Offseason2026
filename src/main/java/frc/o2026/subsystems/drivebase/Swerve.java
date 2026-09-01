@@ -36,6 +36,8 @@ import frc.robot.lib.BLine.Path.PathElement;
 import frc.shared.Util;
 import frc.shared.hardware.vision.objectVision.ObjectCameraIO;
 import frc.shared.hardware.vision.objectVision.ObjectVision;
+import frc.shared.hardware.vision.poseVision.PoseCameraIO;
+import frc.shared.hardware.vision.poseVision.PoseVision;
 import java.util.List;
 import java.util.Optional;
 import org.littletonrobotics.junction.Logger;
@@ -47,20 +49,26 @@ public class Swerve extends SubsystemBase {
 
   private ObjectVision m_objectDetection;
 
+  // We use SubsystemBase::periodic to do all the PoseVision stuff
+  @SuppressWarnings("unused")
+  private PoseVision m_poseVision;
+
   private Optional<Rotation2d> m_odDirection = Optional.empty();
 
   private boolean m_fieldCentricity = false;
 
-  FollowPath.Builder m_pathBuilder;
+  private FollowPath.Builder m_pathBuilder;
 
   private PIDController m_xController = new PIDController(5, 0, 0.3);
   private PIDController m_yController = new PIDController(5, 0, 0.3);
   private PIDController m_rotController = new PIDController(4, 0.0, 0.5);
 
-  public Swerve(SwerveIO io, ObjectCameraIO odIo) {
+  public Swerve(SwerveIO io, ObjectCameraIO odIo, PoseCameraIO... poseCameras) {
 
     m_io = io;
     m_objectDetection = new ObjectVision(odIo);
+
+    m_poseVision = new PoseVision((data) -> m_io.addVisionMeasurement(data), poseCameras);
 
     m_rotController.enableContinuousInput(-Math.PI, Math.PI);
     m_rotController.setTolerance(Units.degreesToRadians(5.0));
@@ -88,7 +96,7 @@ public class Swerve extends SubsystemBase {
         // Method that will drive the robot given ROBOT RELATIVE ChassisSpeeds.
         (speeds, feedforwards) -> {
           m_fieldCentricity = false;
-          setState(m_desiredState.with(speeds));
+          m_io.driveRobotRelative(speeds);
         },
         new PPHolonomicDriveController(
             // Translation PID constants
@@ -128,12 +136,12 @@ public class Swerve extends SubsystemBase {
     return m_ioInputs.pose.getRotation().toRotation2d();
   }
 
-  public void setState(DesiredState desiredState) {
+  public Command setState(SwerveDesiredState desiredState) {
 
-    m_desiredState = desiredState;
+    return runOnce(() -> m_desiredState = desiredState);
   }
 
-  public static enum DesiredState {
+  public static enum SwerveDesiredState {
     driveField,
     driveRobot,
     driveDefault,
@@ -141,30 +149,30 @@ public class Swerve extends SubsystemBase {
     aim,
     aimSOTM,
     intakeAssist,
-    hardStop,
+    hardStop, // XMODE
     idle;
 
     public ChassisSpeeds speeds = new ChassisSpeeds();
     public Rotation2d rotationTarget = new Rotation2d();
     public Pose2d poseTarget = new Pose2d();
 
-    public DesiredState with(ChassisSpeeds speeds) {
+    public SwerveDesiredState with(ChassisSpeeds speeds) {
       this.speeds = speeds;
       return this;
     }
 
-    public DesiredState with(Rotation2d rotationTarget) {
+    public SwerveDesiredState with(Rotation2d rotationTarget) {
       this.rotationTarget = rotationTarget;
       return this;
     }
 
-    public DesiredState with(Pose2d poseTarget) {
+    public SwerveDesiredState with(Pose2d poseTarget) {
       this.poseTarget = poseTarget;
       return this;
     }
   }
 
-  private DesiredState m_desiredState = DesiredState.idle;
+  private SwerveDesiredState m_desiredState = SwerveDesiredState.idle;
 
   @Override
   public void periodic() {
@@ -243,7 +251,7 @@ public class Swerve extends SubsystemBase {
         break;
     }
 
-    if (m_desiredState != DesiredState.intakeAssist) m_odDirection = Optional.empty();
+    if (m_desiredState != SwerveDesiredState.intakeAssist) m_odDirection = Optional.empty();
 
     RobotState.setLastMeasuredSpeeds(getChassisSpeeds());
     RobotState.setPoseEst(getPose());
@@ -259,7 +267,7 @@ public class Swerve extends SubsystemBase {
   private void drive(ChassisSpeeds speeds, boolean fieldRelative) {
 
     Rotation2d driveHeading =
-        m_desiredState == DesiredState.pidPose
+        m_desiredState == SwerveDesiredState.pidPose
             ? getHeading()
             : (Util.isRed() ? getHeading() : getHeading().plus(Rotation2d.k180deg));
 

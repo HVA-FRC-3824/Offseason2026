@@ -17,8 +17,8 @@ import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.o2026.Configs;
 import frc.o2026.RobotState;
 import frc.shared.hardware.motor.MotorIO;
+import frc.shared.hardware.motor.MotorIO.MotorInputs;
 import frc.shared.hardware.motor.MotorInputsAutoLogged;
-
 import org.littletonrobotics.junction.Logger;
 
 public class Roller extends SubsystemBase {
@@ -40,7 +40,7 @@ public class Roller extends SubsystemBase {
   private MeasuredState m_measuredState = MeasuredState.off;
 
   private final MotorIO m_io;
-  private final MotorInputsAutoLogged m_ioInputs = new MotorInputsAutoLogged();
+  private final MotorInputs m_ioInputs = new MotorInputs();
 
   private final Timer m_blockageDetector = new Timer();
   private final Timer m_unblockDuration = new Timer();
@@ -69,7 +69,7 @@ public class Roller extends SubsystemBase {
   public void periodic() {
 
     m_io.updateInputs(m_ioInputs);
-    Logger.processInputs("Roller", m_ioInputs);
+    Logger.processInputs("Roller", (MotorInputsAutoLogged) m_ioInputs);
 
     if (m_ioInputs.velocity.gt(RotationsPerSecond.of(2.0))) m_measuredState = MeasuredState.on;
     else if (m_ioInputs.velocity.lt(RotationsPerSecond.of(-2.0)))
@@ -129,9 +129,6 @@ public class Roller extends SubsystemBase {
     }
 
     if (m_desiredState != RollerDesiredState.on) m_io.periodic();
-
-    Logger.recordOutput("roller/m-velocity", m_ioInputs.velocity.in(RotationsPerSecond));
-    Logger.recordOutput("roller/d-velocity", m_ioInputs.lastReference);
 
     if (m_ioInputs.lastReference >= 10.0) {
       RobotState.setSimIntaking(true);

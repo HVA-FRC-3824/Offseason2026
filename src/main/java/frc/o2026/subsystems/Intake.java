@@ -22,6 +22,7 @@ import edu.wpi.first.wpilibj2.command.WaitCommand;
 import frc.o2026.Configs;
 import frc.o2026.RobotState;
 import frc.shared.hardware.motor.MotorIO;
+import frc.shared.hardware.motor.MotorIO.MotorInputs;
 import frc.shared.hardware.motor.MotorInputsAutoLogged;
 import org.littletonrobotics.junction.Logger;
 
@@ -30,7 +31,7 @@ public class Intake extends SubsystemBase {
   private MotorIO m_io;
   private MotorIO m_ioFollower;
 
-  private MotorInputsAutoLogged m_ioInputs = new MotorInputsAutoLogged();
+  private MotorInputs m_ioInputs = new MotorInputs();
 
   public Intake(MotorIO io, MotorIO ioFollower) {
 
@@ -49,7 +50,7 @@ public class Intake extends SubsystemBase {
     m_ioFollower.periodic();
 
     m_io.updateInputs(m_ioInputs);
-    Logger.processInputs("Intake", m_ioInputs);
+    Logger.processInputs("Intake", (MotorInputsAutoLogged) m_ioInputs);
 
     Logger.recordOutput("Intake/d-angle", m_ioInputs.lastReference);
     Logger.recordOutput("Intake/m-angle", m_ioInputs.position.in(Rotations));

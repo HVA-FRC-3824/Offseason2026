@@ -18,8 +18,7 @@ import edu.wpi.first.math.kinematics.SwerveModulePosition;
 import edu.wpi.first.math.kinematics.SwerveModuleState;
 import frc.o2026.Constants;
 import frc.shared.hardware.gyro.GyroIO;
-import frc.shared.hardware.vision.poseVision.PoseCameraIO;
-import frc.shared.hardware.vision.poseVision.PoseVision;
+import frc.shared.hardware.vision.poseVision.PoseVision.VisionData;
 import org.littletonrobotics.junction.Logger;
 
 /// @brief Chassis subsystem for swerve drive control
@@ -60,33 +59,29 @@ public class SwerveIOReal implements SwerveIO {
   private SwerveModule m_brSwerveModules;
   private SwerveModule m_blSwerveModules;
 
-  private SwerveModulePosition[] m_modulePositions = new SwerveModulePosition[4];
+  private SwerveModulePosition[] m_modulePositions =
+      new SwerveModulePosition[] {
+        new SwerveModulePosition(),
+        new SwerveModulePosition(),
+        new SwerveModulePosition(),
+        new SwerveModulePosition()
+      };
 
   private SwerveDrivePoseEstimator3d m_estimator;
 
   ChassisSpeeds m_desiredSpeeds = new ChassisSpeeds(0, 0, 0);
 
-  boolean m_xMode = false;
-
   private GyroIO m_gyroIO;
-  private PoseVision m_vision;
 
   public SwerveIOReal(
-      SwerveModule fr,
-      SwerveModule fl,
-      SwerveModule br,
-      SwerveModule bl,
-      GyroIO gyroIO,
-      PoseCameraIO... cameras) {
+      SwerveModule fr, SwerveModule fl, SwerveModule br, SwerveModule bl, GyroIO gyroIO) {
+
+    m_frSwerveModules = fr;
+    m_flSwerveModules = fl;
+    m_brSwerveModules = br;
+    m_blSwerveModules = bl;
 
     m_gyroIO = gyroIO;
-
-    m_vision =
-        new PoseVision(
-            (data) ->
-                m_estimator.addVisionMeasurement(
-                    data.visionMeasurement(), data.timestampSeconds(), data.stdDevs()),
-            cameras);
 
     m_estimator =
         new SwerveDrivePoseEstimator3d(
@@ -123,21 +118,21 @@ public class SwerveIOReal implements SwerveIO {
     Logger.recordOutput("Pidgeon-Output ", m_gyroIO.getGyroRotation().getMeasureZ().in(Degrees));
   }
 
+  @Override
   public void driveRobotRelative(ChassisSpeeds speeds) {
-
-    if (m_xMode) {
-      // Set the module states to x mode
-      setModuleStates(Constants.Chassis.XishStates.toArray(new SwerveModuleState[0]));
-
-      // Save the desired speeds for logging later
-      return;
-    }
 
     // Save the desired states for use and logging later
     SwerveModuleState[] desiredStates = Constants.Chassis.Kinematics.toSwerveModuleStates(speeds);
 
     // Set the desired state for each swerve module
     setModuleStates(desiredStates);
+  }
+
+  @Override
+  public void addVisionMeasurement(VisionData data) {
+
+    m_estimator.addVisionMeasurement(
+        data.visionMeasurement(), data.timestampSeconds(), data.stdDevs());
   }
 
   @Override

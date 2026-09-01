@@ -17,8 +17,7 @@ import edu.wpi.first.math.kinematics.SwerveModuleState;
 import edu.wpi.first.math.system.plant.DCMotor;
 import frc.o2026.Constants;
 import frc.o2026.RobotState;
-import frc.shared.hardware.vision.poseVision.PoseCameraIO;
-import frc.shared.hardware.vision.poseVision.PoseVision;
+import frc.shared.hardware.vision.poseVision.PoseVision.VisionData;
 import frc.shared.sim.SelfControlledSwerveDriveSimulation;
 import frc.shared.sim.SwerveDriveSimulation;
 import org.ironmaple.simulation.SimulatedArena;
@@ -61,20 +60,9 @@ public class SwerveIOSim implements SwerveIO {
           new SwerveDriveSimulation(
               driveTrainSimulationConfig, new Pose2d(2, 2, new Rotation2d(Math.PI))));
 
-  private PoseVision m_vision;
-
   private boolean m_xMode = false;
 
-  public SwerveIOSim(PoseCameraIO... cameras) {
-
-    m_vision =
-        new PoseVision(
-            (data) ->
-                m_swerveDriveSimulation.addVisionEstimation(
-                    data.visionMeasurement().toPose2d(),
-                    data.timestampSeconds(),
-                    data.get2dStdDevs()),
-            cameras);
+  public SwerveIOSim() {
 
     SimulatedArena.getInstance()
         .addDriveTrainSimulation(m_swerveDriveSimulation.getDriveTrainSimulation());
@@ -129,12 +117,11 @@ public class SwerveIOSim implements SwerveIO {
     Logger.recordOutput("Sim/Pose", simPose);
   }
 
-  public boolean getIsXMode() {
-    return m_xMode;
-  }
+  @Override
+  public void addVisionMeasurement(VisionData data) {
 
-  public void setIsXMode(boolean xMode) {
-    m_xMode = xMode;
+    m_swerveDriveSimulation.addVisionEstimation(
+        data.visionMeasurement().toPose2d(), data.timestampSeconds(), data.get2dStdDevs());
   }
 
   @Override

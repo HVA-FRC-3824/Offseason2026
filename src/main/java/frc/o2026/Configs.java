@@ -27,6 +27,7 @@ import edu.wpi.first.units.measure.AngularVelocity;
 import edu.wpi.first.units.measure.LinearAcceleration;
 import edu.wpi.first.units.measure.LinearVelocity;
 import edu.wpi.first.wpilibj.RobotBase;
+import frc.o2026.Constants.RobotImpl;
 import frc.shared.hardware.motor.MotorConfig;
 
 public class Configs {
@@ -35,11 +36,9 @@ public class Configs {
 
     // The standard deviations of our vision estimated poses, which affect correction rate
     // (Fake values. Experiment and determine estimation noise on an actual robot.)
-    public static final Matrix<N4, N1> kSingleTagStdDevs =
-        VecBuilder.fill(4, 4, 4, Double.MAX_VALUE);
+    public static final Matrix<N4, N1> kSingleTagStdDevs = VecBuilder.fill(4, 4, 4, 4);
 
-    public static final Matrix<N4, N1> kMultiTagStdDevs =
-        VecBuilder.fill(0.4, 0.4, 1.0, Double.MAX_VALUE);
+    public static final Matrix<N4, N1> kMultiTagStdDevs = VecBuilder.fill(0.4, 0.4, 0.4, 1.0);
   }
 
   public static final class Intake {
@@ -122,41 +121,60 @@ public class Configs {
     public static final LinearVelocity IntakeAssistSpeed = MetersPerSecond.of(0.2);
 
     public static final MotorConfig DriveConfig =
-        new MotorConfig()
-            .withSupplyCurrent(Amps.of(40.0))
-            .withStatorCurrent(Amps.of(80.0))
-            .withBrakeMode(false)
-            .withInverted(false)
-            .withContinuousWrap(false)
-            .withP(0.07)
-            .withV(0.0)
-            .withVelocityLimit(RotationsPerSecond.of(10))
-            .withAccelerationLimit(RotationsPerSecondPerSecond.of(10));
+        Constants.Impl == RobotImpl.DevBot
+            ? new MotorConfig()
+                .withSupplyCurrent(Amps.of(40.0))
+                .withStatorCurrent(Amps.of(80.0))
+                .withBrakeMode(false)
+                .withInverted(false)
+                .withContinuousWrap(false)
+                .withP(0.07)
+                .withV(0.0)
+                .withVelocityLimit(RotationsPerSecond.of(10))
+                .withAccelerationLimit(RotationsPerSecondPerSecond.of(10))
+            : new MotorConfig()
+                .withSupplyCurrent(Amps.of(40.0))
+                .withStatorCurrent(Amps.of(80.0))
+                .withBrakeMode(true)
+                .withInverted(false)
+                .withContinuousWrap(false)
+                .withP(0.03)
+                .withI(1.5)
+                .withV(0.12877);
 
     public static final MotorConfig TurnConfig =
-        new MotorConfig()
-            .withSupplyCurrent(Amps.of(20.0))
-            .withStatorCurrent(Amps.of(40.0))
-            .withInverted(true)
-            .withBrakeMode(true)
-            .withContinuousWrap(true)
-            .withP(1.0)
-            .withD(0.0)
-            .withSensorToMechanismRatio(21.5)
-            .withVelocityLimit(RotationsPerSecond.of(150))
-            .withAccelerationLimit(RotationsPerSecondPerSecond.of(200));
+        Constants.Impl == RobotImpl.DevBot
+            ? new MotorConfig()
+                .withSupplyCurrent(Amps.of(20.0))
+                .withStatorCurrent(Amps.of(40.0))
+                .withInverted(true)
+                .withBrakeMode(true)
+                .withContinuousWrap(true)
+                .withP(1.0)
+                .withD(0.0)
+                .withSensorToMechanismRatio(21.5)
+                .withVelocityLimit(RotationsPerSecond.of(150))
+                .withAccelerationLimit(RotationsPerSecondPerSecond.of(200))
+            : new MotorConfig()
+                .withSupplyCurrent(Amps.of(20.0))
+                .withStatorCurrent(Amps.of(40.0))
+                .withInverted(true)
+                .withBrakeMode(true)
+                .withContinuousWrap(true)
+                .withP(12.0)
+                .withD(0.2)
+                .withSensorToMechanismRatio(150.0 / 7.0)
+                .withVelocityLimit(RotationsPerSecond.of(150))
+                .withAccelerationLimit(RotationsPerSecondPerSecond.of(200));
 
     public static LinearVelocity MaximumLinear = FeetPerSecond.of(12.0);
-
     public static LinearAcceleration MaximumLinearAcceleration = FeetPerSecondPerSecond.of(12.0);
-
     public static AngularVelocity MaximumAngularVelocity = RadiansPerSecond.of(4 * Math.PI);
-
     public static AngularAcceleration MaximumAngularAcceleration =
         RadiansPerSecondPerSecond.of(4 * Math.PI);
 
     static {
-      if (RobotBase.isReal()) {
+      if (Constants.Impl == RobotImpl.DevBot) {
         MaximumLinear = MaximumLinear.div(2.0);
         MaximumLinearAcceleration = MaximumLinearAcceleration.div(2.0);
         MaximumAngularVelocity = MaximumAngularVelocity.div(2.0);

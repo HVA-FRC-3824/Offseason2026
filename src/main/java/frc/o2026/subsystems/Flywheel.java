@@ -23,27 +23,36 @@ import frc.o2026.RobotState;
 import frc.shared.Util;
 import frc.shared.hardware.motor.MotorIO;
 import frc.shared.hardware.motor.MotorInputsAutoLogged;
-import frc.shared.hardware.motor.MotorIO.MotorInputs;
 import frc.shared.rebuilt.BallSim;
 import frc.shared.rebuilt.firecontrol.ProjectileSimulator;
 import frc.shared.rebuilt.firecontrol.ShotCalculator;
+import lombok.Getter;
 import org.littletonrobotics.junction.Logger;
 
 public class Flywheel extends SubsystemBase {
 
-  private static enum FlywheelDesiredState {
+  public static enum FlywheelDesiredState {
     off,
     manual,
-    auto
+    setpoint,
+    auto;
+
+    // This works both as trim AND as manual
+    @Getter private AngularVelocity speeds = RPM.of(0.0);
+    @Getter private Setpoints desiredSetpoint = Setpoints.Low;
+
+    public FlywheelDesiredState with(AngularVelocity speeds) {
+      this.speeds = speeds;
+      return this;
+    }
+
+    public FlywheelDesiredState with(Setpoints desiredSetpoint) {
+      this.desiredSetpoint = desiredSetpoint;
+      return this;
+    }
   }
 
-  private static enum FlywheelMeasuredState {
-    off,
-    on,
-    stopped
-  }
-
-  private boolean m_validShot = false;
+  private FlywheelDesiredState m_desiredState = FlywheelDesiredState.off;
 
   private MotorIO m_teacherIO;
   private MotorIO m_studentIO;
@@ -51,8 +60,6 @@ public class Flywheel extends SubsystemBase {
   private MotorInputsAutoLogged m_ioInputs = new MotorInputsAutoLogged();
 
   private ShotCalculator m_shotCalc;
-
-  private ShotCalculator.LaunchParameters shot;
 
   public Flywheel(MotorIO teacherIO, MotorIO studentIO) {
 
@@ -114,6 +121,11 @@ public class Flywheel extends SubsystemBase {
     m_studentIO.follow(m_teacherIO.getId(), true);
   }
 
+  public Command setState(FlywheelDesiredState state) {
+
+    return runOnce(() -> m_desiredState = state);
+  }
+
   @Override
   public void periodic() {
 
@@ -126,7 +138,7 @@ public class Flywheel extends SubsystemBase {
     var pose = RobotState.getPoseEst().toPose2d();
     var rot = RobotState.getPoseEst().getRotation();
 
-    shot =
+    var shot =
         m_shotCalc.calculate(
             new ShotCalculator.ShotInputs(
                 pose,
@@ -141,13 +153,15 @@ public class Flywheel extends SubsystemBase {
                 rot.getMeasureY().in(Degrees),
                 rot.getMeasureX().in(Degrees)));
 
+    var validShot = shot.isValid() && shot.confidence() > 50;
+
     if (shot.driveAngle() != Rotation2d.kZero) RobotState.setSOTMRotTarget(shot.driveAngle());
 
     if (RobotBase.isSimulation())
       Logger.runEveryN(
           5,
           () -> {
-            if (m_validShot && RobotState.isSimIndexing() && RobotState.getSimFuelCount() > 0) {
+            if (validShot && RobotState.isSimIndexing() && RobotState.getSimFuelCount() > 0) {
 
               RobotState.decFuel();
 
@@ -159,36 +173,26 @@ public class Flywheel extends SubsystemBase {
     Logger.recordOutput("flywheel/m-velocity", m_ioInputs.velocity.in(RotationsPerSecond));
     Logger.recordOutput("flywheel/d-velocity", m_ioInputs.lastReference);
     Logger.recordOutput("flywheel/m-fuelCount", RobotState.getSimFuelCount());
-  }
 
-  public Command off() {
+    switch (m_desiredState) {
+      case off:
+        m_teacherIO.brake();
+        break;
 
-    return runOnce(
-        () -> {
-          m_teacherIO.brake();
-        });
-  }
+      case manual:
+        // make sure to add trim to the with() argument when changing state
+        m_teacherIO.setVelocity(m_desiredState.getSpeeds());
+        break;
 
-  public Command manual(AngularVelocity velocity) {
+      case auto:
+        m_teacherIO.setVelocity(RPM.of(shot.rpm()).plus(m_desiredState.getSpeeds()));
+        break;
 
-    return runOnce(
-        () -> {
-          m_teacherIO.setVelocity(velocity);
-        });
-  }
-
-  public Command auto() {
-
-    // Blue only
-    // Translation2d hubCenter  = new Translation2d(4.6, 4.0);  // your target
-    // Translation2d hubForward = new Translation2d(1, 0);       // which way the hub faces
-
-    return run(() -> {
-          m_validShot = shot.isValid() && shot.confidence() > 50;
-
-          m_teacherIO.setVelocity(RPM.of(shot.rpm()));
-        })
-        .withName("FlywheelAutoAim");
+      case setpoint:
+        m_teacherIO.setVelocity(
+            m_desiredState.getDesiredSetpoint().getVelocity().plus(m_desiredState.getSpeeds()));
+        break;
+    }
   }
 
   public boolean isReady() {
@@ -204,10 +208,10 @@ public class Flywheel extends SubsystemBase {
     Neutral(Configs.Flywheel.NeutralPassSpeed),
     Field(Configs.Flywheel.FieldPassSpeed);
 
-    AngularVelocity m_velocity;
+    @Getter private AngularVelocity velocity;
 
-    private Setpoints(AngularVelocity vel) {
-      m_velocity = vel;
+    private Setpoints(AngularVelocity velocity) {
+      this.velocity = velocity;
     }
   }
 }

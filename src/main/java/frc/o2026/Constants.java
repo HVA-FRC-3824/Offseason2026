@@ -37,14 +37,14 @@ import java.util.List;
 
 public final class Constants {
 
-  public static enum Robot {
+  public static enum RobotImpl {
     Real,
     DevBot,
     Sim,
     Replay
   }
 
-  public static final Robot Impl = Robot.DevBot;
+  public static final RobotImpl Impl = RobotImpl.DevBot;
 
   public static final class Field {
     /// *** Field Dimensions *** ///
@@ -210,10 +210,17 @@ public final class Constants {
 
     // NOTE: The absolute encoder range is 0.5 to -0.5
     // These are the absolute encoder values that correspond to the wheels facing "forward"
-    public static final Angle FrontRightForwardsAngle = Rotations.of(-0.1396);
-    public static final Angle FrontLeftForwardsAngle = Rotations.of(-0.4800);
-    public static final Angle BackRightForwardsAngle = Rotations.of(0.05908);
-    public static final Angle BackLeftForwardsAngle = Rotations.of(0.08325);
+    public static final Angle FrontRightForwardsAngle =
+        Impl == RobotImpl.DevBot ? Rotations.of(-0.1396) : Rotations.of(0.3824);
+
+    public static final Angle FrontLeftForwardsAngle =
+        Impl == RobotImpl.DevBot ? Rotations.of(-0.4800) : Rotations.of(0.408691);
+
+    public static final Angle BackRightForwardsAngle =
+        Impl == RobotImpl.DevBot ? Rotations.of(0.05908) : Rotations.of(-0.11377);
+
+    public static final Angle BackLeftForwardsAngle =
+        Impl == RobotImpl.DevBot ? Rotations.of(0.08325) : Rotations.of(-0.025146);
 
     public static final Distance WheelBaseMeters = Inches.of(30.0);
     public static final Distance TrackWidthMeters = Inches.of(30.0);
