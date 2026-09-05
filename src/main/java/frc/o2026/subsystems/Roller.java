@@ -2,13 +2,13 @@
 // http://github.com/HVA-FRC-3824
 //
 // Use of this source code is governed by an MIT-style license that can be found in the LICENSE file at
-// the root directory of this project.
+// the root directory of this project. Some code may be governed by other licenses which can be found in the "/External Licenses" directory.
 
 package frc.o2026.subsystems;
 
+import static edu.wpi.first.units.Units.Amps;
 import static edu.wpi.first.units.Units.RotationsPerSecond;
 import static edu.wpi.first.units.Units.Seconds;
-import static edu.wpi.first.units.Units.Volts;
 
 import edu.wpi.first.units.measure.Time;
 import edu.wpi.first.wpilibj.Timer;
@@ -29,15 +29,7 @@ public class Roller extends SubsystemBase {
     backwards
   }
 
-  public static enum MeasuredState {
-    off,
-    on,
-    backwards,
-    blocked
-  }
-
   private RollerDesiredState m_desiredState = RollerDesiredState.off;
-  private MeasuredState m_measuredState = MeasuredState.off;
 
   private final MotorIO m_io;
   private final MotorInputs m_ioInputs = new MotorInputs();
@@ -60,31 +52,21 @@ public class Roller extends SubsystemBase {
     return runOnce(() -> m_desiredState = state);
   }
 
-  public MeasuredState getState() {
-
-    return m_measuredState;
-  }
-
   @Override
   public void periodic() {
 
     m_io.updateInputs(m_ioInputs);
     Logger.processInputs("Roller", (MotorInputsAutoLogged) m_ioInputs);
 
-    if (m_ioInputs.velocity.gt(RotationsPerSecond.of(2.0))) m_measuredState = MeasuredState.on;
-    else if (m_ioInputs.velocity.lt(RotationsPerSecond.of(-2.0)))
-      m_measuredState = MeasuredState.backwards;
-    else if (m_ioInputs.appliedVolts.abs(Volts) > 1.0) m_measuredState = MeasuredState.blocked;
-    else m_measuredState = MeasuredState.off;
-
     switch (m_desiredState) {
       case on:
 
         // 1. Check if we're stopped and start timer before attempting unblock
-        if (m_measuredState == MeasuredState.blocked) {
+        if (m_ioInputs.statorCurrent.in(Amps)
+            > (Configs.Roller.RollerConfig.getStatorCurrent().in(Amps) - 0.5)) {
           m_blockageDetector.reset();
           m_blockageDetector.start();
-        } else if (m_measuredState == MeasuredState.on) {
+        } else if (m_ioInputs.velocity.gt(RotationsPerSecond.of(2.0))) {
           m_blockageDetector.stop();
         }
 
@@ -127,8 +109,6 @@ public class Roller extends SubsystemBase {
         m_blockageDetector.reset();
         break;
     }
-
-    if (m_desiredState != RollerDesiredState.on) m_io.periodic();
 
     if (m_ioInputs.lastReference >= 10.0) {
       RobotState.setSimIntaking(true);

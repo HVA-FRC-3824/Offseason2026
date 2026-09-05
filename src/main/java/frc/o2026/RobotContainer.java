@@ -2,7 +2,7 @@
 // http://github.com/HVA-FRC-3824
 //
 // Use of this source code is governed by an MIT-style license that can be found in the LICENSE file at
-// the root directory of this project.
+// the root directory of this project. Some code may be governed by other licenses which can be found in the "/External Licenses" directory.
 
 package frc.o2026;
 
@@ -28,6 +28,7 @@ import frc.o2026.subsystems.Flywheel.FlywheelDesiredState;
 import frc.o2026.subsystems.Indexer;
 import frc.o2026.subsystems.Indexer.IndexerDesiredState;
 import frc.o2026.subsystems.Intake;
+import frc.o2026.subsystems.Intake.IntakeDesiredState;
 import frc.o2026.subsystems.Roller;
 import frc.o2026.subsystems.Roller.RollerDesiredState;
 import frc.o2026.subsystems.drivebase.Swerve;
@@ -302,7 +303,7 @@ public class RobotContainer extends SubsystemBase {
                 m_indexer
                     .setState(IndexerDesiredState.on)
                     .onlyWhile(() -> m_flywheel.isReady() && m_swerve.isAimed()),
-                m_intake.stowed());
+                m_intake.setState(IntakeDesiredState.stowed));
 
     Supplier<Command> passCmd =
         () ->
@@ -311,7 +312,7 @@ public class RobotContainer extends SubsystemBase {
                 m_indexer
                     .setState(IndexerDesiredState.on)
                     .onlyWhile(() -> m_flywheel.isReady() && m_swerve.isAimed()),
-                m_intake.stowed());
+                m_intake.setState(IntakeDesiredState.stowed));
 
     // AUTOS
 
@@ -335,14 +336,14 @@ public class RobotContainer extends SubsystemBase {
         .leftTrigger()
         .whileTrue(
             Commands.parallel(
-                m_intake.deploy(),
+                m_intake.setState(IntakeDesiredState.deployed),
                 m_roller.setState(RollerDesiredState.on)));
 
     m_driver
         .leftBumper()
         .whileTrue(
             Commands.parallel(
-                m_intake.deploy(),
+                m_intake.setState(IntakeDesiredState.deployed),
                 m_roller.setState(RollerDesiredState.on),
                 m_swerve.setState(SwerveDesiredState.intakeAssist.with(getSpeeds())).repeatedly()));
 
@@ -441,8 +442,11 @@ public class RobotContainer extends SubsystemBase {
             .alongWith(m_swerve.setState(SwerveDesiredState.aimSOTM).repeatedly()));
 
     new EventTrigger("DeployIntake")
-        .onTrue(m_intake.deploy().andThen(m_roller.setState(RollerDesiredState.on)));
-    new EventTrigger("StowIntake").onTrue(m_intake.stowed());
+        .onTrue(
+            m_intake
+                .setState(IntakeDesiredState.deployed)
+                .andThen(m_roller.setState(RollerDesiredState.on)));
+    new EventTrigger("StowIntake").onTrue(m_intake.setState(IntakeDesiredState.stowed));
   }
 
   private ChassisSpeeds getSpeeds() {
