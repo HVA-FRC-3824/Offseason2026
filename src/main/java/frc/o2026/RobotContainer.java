@@ -6,6 +6,7 @@
 
 package frc.o2026;
 
+import static edu.wpi.first.units.Units.Feet;
 import static edu.wpi.first.units.Units.Inches;
 import static edu.wpi.first.units.Units.RPM;
 import static edu.wpi.first.units.Units.Seconds;
@@ -50,8 +51,12 @@ import frc.shared.hardware.vision.poseVision.PoseCameraIOLimelight;
 import frc.shared.hardware.vision.poseVision.PoseCameraIOPhoton;
 import frc.shared.hardware.vision.poseVision.PoseCameraIOReplay;
 import frc.shared.hardware.vision.poseVision.PoseCameraIOSim;
+import lombok.Getter;
+import lombok.Setter;
+
 import java.util.function.Supplier;
 import org.ironmaple.simulation.SimulatedArena;
+import org.littletonrobotics.junction.Logger;
 
 public class RobotContainer extends SubsystemBase {
 
@@ -64,19 +69,34 @@ public class RobotContainer extends SubsystemBase {
   private CommandXboxController m_driver = new CommandXboxController(Constants.Usb.DrivePort);
   private CommandXboxController m_operator = new CommandXboxController(Constants.Usb.OperatorPort);
   //   private GuitarController m_guitar = new GuitarController(Constants.Usb.GuitarPort);
-  //   private NONBenevolentSalesman m_creditOrDebit =
+  //   private NONBenevolentSalesman m_debitOrCredit =
   //       new NONBenevolentSalesman(Constants.Usb.CreditPort);
 
   private SlewRateLimiter m_xLimiter = new SlewRateLimiter(2.0);
   private SlewRateLimiter m_yLimiter = new SlewRateLimiter(2.0);
   private SlewRateLimiter m_rotLimiter = new SlewRateLimiter(2.0);
 
-  enum Limiting {
+  private static enum Limiting {
     TrigExp,
-    Linear
+    Linear;
+    
+    @Getter @Setter private static Limiting mode = Limiting.TrigExp;
   }
 
-  private Limiting m_limit = Limiting.TrigExp;
+  private static enum ControlMode {
+    Match,
+    Testing;
+
+    static ControlMode mode = ControlMode.Match;
+
+    public static void setMode(ControlMode mode) {
+        ControlMode.mode = mode;
+        Logger.recordOutput("ControlMode", mode.toString());
+    }
+
+    public static boolean isMatch() { return mode == ControlMode.Match; }
+    public static boolean isTesting() { return mode == ControlMode.Testing; }
+  }
 
   private AngularVelocity m_trim = RPM.of(0.0);
 
@@ -293,32 +313,25 @@ public class RobotContainer extends SubsystemBase {
         break;
     }
 
-    // COMMAND CREATORS
+    /// COMMAND CREATORS
+    
+    // SHOOTING COMMANDS
 
-    Supplier<Command> shootCmd =
+    Supplier<Command> fireWhenReady =
         () ->
             Commands.parallel(
-                m_flywheel.setState(FlywheelDesiredState.autoScore.with(() -> m_trim)),
                 m_indexer
                     .setState(IndexerDesiredState.on)
+                    .repeatedly()
                     .onlyWhile(() -> m_flywheel.isReady() && m_swerve.isAimed()),
-                m_intake.stowed());
+                m_intake.stowed().repeatedly());
 
-    Supplier<Command> passCmd =
-        () ->
-            Commands.parallel(
-                m_flywheel.setState(FlywheelDesiredState.autoScore.with(() -> m_trim)),
-                m_indexer
-                    .setState(IndexerDesiredState.on)
-                    .onlyWhile(() -> m_flywheel.isReady() && m_swerve.isAimed()),
-                m_intake.stowed());
-
-    // AUTOS
+    /// AUTOS
 
     m_autoChooser = AutoBuilder.buildAutoChooser();
     SmartDashboard.putData("Auto Chooser", m_autoChooser);
 
-    // DEFAULT COMMANDS
+    /// DEFAULT COMMANDS
 
     m_swerve.setDefaultCommand(
         m_swerve.defer(() -> m_swerve.setState(SwerveDesiredState.driveDefault.with(getSpeeds()))));
@@ -326,50 +339,20 @@ public class RobotContainer extends SubsystemBase {
     m_indexer.setDefaultCommand(m_indexer.setState(IndexerDesiredState.off));
     m_roller.setDefaultCommand(m_roller.setState(RollerDesiredState.off));
 
-    // CONTROLLER BINDINGS
+    /// CONTROLLER BINDINGS
+
+    // ALL MODES
 
     m_driver.a().onTrue(m_swerve.resetGyro());
     m_driver.y().onTrue(m_swerve.toggleFieldCentricity());
 
-    m_driver
-        .leftTrigger()
-        .whileTrue(
-            Commands.parallel(
-                m_intake.deploy(),
-                m_roller.setState(RollerDesiredState.on)));
-
-    m_driver
-        .leftBumper()
-        .whileTrue(
-            Commands.parallel(
-                m_intake.deploy(),
-                m_roller.setState(RollerDesiredState.on),
-                m_swerve.setState(SwerveDesiredState.intakeAssist.with(getSpeeds())).repeatedly()));
-
-    m_driver
-        .rightTrigger()
-        .onTrue(
-            shootCmd
-                .get()
-                .repeatedly()
-                .alongWith(
-                    m_swerve.setState(SwerveDesiredState.aimSOTM.with(getSpeeds())).repeatedly()));
-
-    m_driver
-        .rightBumper()
-        .onTrue(
-            passCmd
-                .get()
-                .repeatedly()
-                .alongWith(
-                    m_swerve.setState(SwerveDesiredState.aimPass.with(getSpeeds())).repeatedly()));
-
-    m_operator.rightBumper().onTrue(Util.runOnce(() -> m_trim = m_trim.plus(RPM.of(50.0))));
-
-    m_operator.leftBumper().onTrue(Util.runOnce(() -> m_trim = m_trim.minus(RPM.of(50.0))));
+    m_driver.start().onTrue(Util.runOnce(() -> ControlMode.setMode(ControlMode.Match)));
+    m_driver.back().onTrue(Util.runOnce(() -> ControlMode.setMode(ControlMode.Testing)));
+    m_operator.start().onTrue(Util.runOnce(() -> ControlMode.setMode(ControlMode.Match)));
+    m_operator.back().onTrue(Util.runOnce(() -> ControlMode.setMode(ControlMode.Testing)));
 
     m_operator.a().onTrue(Util.runOnce(() -> m_trim = RPM.of(0.0)));
-
+    
     SmartDashboard.putData(
         "yUp",
         m_swerve
@@ -412,12 +395,98 @@ public class RobotContainer extends SubsystemBase {
             .repeatedly()
             .withTimeout(Seconds.of(0.2)));
 
+    // MATCH BINDINGS
+
+    m_driver
+        .leftTrigger()
+        .and(ControlMode::isMatch)
+        .whileTrue(
+            Commands.parallel(
+                m_intake.deploy(),
+                m_roller.setState(RollerDesiredState.on)));
+
+    m_driver
+        .leftBumper()
+        .and(ControlMode::isMatch)
+        .whileTrue(
+            Commands.parallel(
+                m_intake.deploy(),
+                m_roller.setState(RollerDesiredState.on),
+                m_swerve.setState(SwerveDesiredState.intakeAssist.with(getSpeeds())).repeatedly()));
+
+    m_driver
+        .rightTrigger()
+        .and(ControlMode::isMatch)
+        .whileTrue(
+            fireWhenReady
+                .get()
+                .repeatedly()
+                .alongWith(
+                    m_swerve.setState(SwerveDesiredState.aimSOTM.with(getSpeeds())).repeatedly(),
+                    m_flywheel.setState(FlywheelDesiredState.autoPass.with(() -> m_trim)).repeatedly()));
+
+    m_driver
+        .rightBumper()
+        .and(ControlMode::isMatch)
+        .whileTrue(
+            fireWhenReady
+                .get()
+                .repeatedly()
+                .alongWith(
+                    m_swerve.setState(SwerveDesiredState.aimPass.with(getSpeeds())).repeatedly(),
+                    m_flywheel.setState(FlywheelDesiredState.autoScore.with(() -> m_trim)).repeatedly()));
+
+    m_operator
+        .rightBumper()
+        .and(ControlMode::isMatch)
+        .onTrue(Util.runOnce(() -> m_trim = m_trim.plus(RPM.of(50.0))));
+
+    m_operator
+        .leftBumper()
+        .and(ControlMode::isMatch)
+        .onTrue(Util.runOnce(() -> m_trim = m_trim.minus(RPM.of(50.0))));
+
+    
+    // TEST BINDINGS
+
+    m_driver
+        .povUp()
+        .and(ControlMode::isMatch)
+        .onTrue(Util.runOnce(() -> m_trim = m_trim.plus(RPM.of(100.0))));
+
+    m_driver
+        .povUp()
+        .and(ControlMode::isMatch)
+        .onTrue(Util.runOnce(() -> m_trim = m_trim.minus(RPM.of(100.0))));
+
+    m_driver
+        .leftBumper()
+        .and(ControlMode::isTesting)
+        .whileTrue(m_swerve.setState(SwerveDesiredState.aimPass.with(getSpeeds())).repeatedly());
+
+    m_driver
+        .rightBumper()
+        .and(ControlMode::isTesting)
+        .whileTrue(m_swerve.setState(SwerveDesiredState.aimSOTM.with(getSpeeds())).repeatedly());
+    
+    m_driver
+        .b()
+        .and(ControlMode::isTesting)
+        .whileTrue(fireWhenReady.get().repeatedly());
+
+    m_driver
+        .rightTrigger()
+        .and(ControlMode::isTesting)
+        .whileTrue(m_flywheel.setState(FlywheelDesiredState.distance.with(Feet.of(10))));
+
+    RPM.of(SmartDashboard.getNumber("trim/speed", m_trim.in(RPM)));
+
     // m_guitar.A().onTrue(m_swerve.drive(() -> new ChassisSpeeds(-0.5, 0.0, 0.0)));
     // m_guitar.D().onTrue(m_swerve.drive(() -> new ChassisSpeeds(0.5, 0.0, 0.0)));
     // m_guitar.G().onTrue(m_swerve.drive(() -> new ChassisSpeeds(0.0, -0.5, 0.0)));
     // m_guitar.B().onTrue(m_swerve.drive(() -> new ChassisSpeeds(0.0, 0.5, 0.0)));
 
-    // m_creditOrDebit
+    // m_debitOrCredit
     //     .swipe()
     //     .onTrue(
     //         m_swerve.defer(
@@ -435,10 +504,13 @@ public class RobotContainer extends SubsystemBase {
 
     NamedCommands.registerCommand(
         "ShootAll",
-        shootCmd
+        fireWhenReady
             .get()
             .repeatedly()
-            .alongWith(m_swerve.setState(SwerveDesiredState.aimSOTM).repeatedly()));
+            .alongWith(
+                m_flywheel.setState(FlywheelDesiredState.autoScore).repeatedly(),
+                m_swerve.setState(SwerveDesiredState.aimSOTM).repeatedly())
+            .withTimeout(Seconds.of(5.0)));
 
     new EventTrigger("DeployIntake")
         .onTrue(m_intake.deploy().andThen(m_roller.setState(RollerDesiredState.on)));
@@ -453,7 +525,7 @@ public class RobotContainer extends SubsystemBase {
 
     double strafe, forwards, rot;
 
-    switch (m_limit) {
+    switch (Limiting.getMode()) {
       case TrigExp:
         double angle = Math.atan2(leftY, leftX);
         double magnitude = Math.sqrt(Math.pow(leftY, 2) + Math.pow(leftX, 2));

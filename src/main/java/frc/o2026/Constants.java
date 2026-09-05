@@ -30,7 +30,6 @@ import edu.wpi.first.units.measure.Angle;
 import edu.wpi.first.units.measure.Distance;
 import edu.wpi.first.wpilibj.simulation.DCMotorSim;
 import edu.wpi.first.wpilibj.simulation.FlywheelSim;
-import frc.shared.Util;
 import frc.shared.hardware.vision.VisionConfig;
 import java.util.ArrayList;
 import java.util.List;

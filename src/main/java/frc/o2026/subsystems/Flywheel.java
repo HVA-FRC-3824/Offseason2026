@@ -7,6 +7,8 @@
 package frc.o2026.subsystems;
 
 import static edu.wpi.first.units.Units.Degrees;
+import static edu.wpi.first.units.Units.Feet;
+import static edu.wpi.first.units.Units.Meters;
 import static edu.wpi.first.units.Units.RPM;
 import static edu.wpi.first.units.Units.RotationsPerSecond;
 
@@ -17,6 +19,7 @@ import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.util.Units;
 import edu.wpi.first.units.measure.AngularVelocity;
+import edu.wpi.first.units.measure.Distance;
 import edu.wpi.first.wpilibj.RobotBase;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
@@ -38,12 +41,14 @@ public class Flywheel extends SubsystemBase {
     off,
     manual,
     setpoint,
+    distance,
     autoPass,
     autoScore;
 
     // This works both as trim AND as manual
     @Getter private Supplier<AngularVelocity> speeds = () -> RPM.of(0.0);
     @Getter private Setpoints desiredSetpoint = Setpoints.Low;
+    @Getter private Distance desiredDistance = Feet.of(0.0);
 
     public FlywheelDesiredState with(Supplier<AngularVelocity> speeds) {
       this.speeds = speeds;
@@ -52,6 +57,11 @@ public class Flywheel extends SubsystemBase {
 
     public FlywheelDesiredState with(Setpoints desiredSetpoint) {
       this.desiredSetpoint = desiredSetpoint;
+      return this;
+    }
+
+    public FlywheelDesiredState with(Distance desiredDistance) {
+      this.desiredDistance = desiredDistance;
       return this;
     }
   }
@@ -142,16 +152,24 @@ public class Flywheel extends SubsystemBase {
     var pose = RobotState.getPoseEst().toPose2d();
     var rot = RobotState.getPoseEst().getRotation();
 
-    var target = 
-        FlywheelDesiredState.autoScore == m_desiredState
-        ? Util.isRed()
-            ? Constants.Field.RedHub.getTranslation().toTranslation2d()
-            : Constants.Field.BlueHub.getTranslation().toTranslation2d()
-        : new Translation2d(
-            RobotState.getPoseEst().getY(),
-            Util.isRed()
-              ? Constants.Field.FieldWidthMeters
-              : 0.0);
+    Translation2d target = switch (m_desiredState) {
+            case autoScore -> 
+                Util.isRed()
+                    ? Constants.Field.RedHub.getTranslation().toTranslation2d()
+                    : Constants.Field.BlueHub.getTranslation().toTranslation2d();
+            case autoPass -> 
+                new Translation2d(
+                    RobotState.getPoseEst().getY(),
+                    Util.isRed()
+                        ? Constants.Field.FieldWidthMeters
+                        : 0.0);
+            default ->
+                pose.getTranslation().plus(
+                  new Translation2d(
+                    Util.isRed()
+                        ? Meters.of(-2.0)
+                        : Meters.of(2.0), Meters.of(0.0)));
+        };
 
     var shot =
         m_shotCalc.calculate(
@@ -207,6 +225,10 @@ public class Flywheel extends SubsystemBase {
       case setpoint:
         m_teacherIO.setVelocity(
             m_desiredState.getDesiredSetpoint().getVelocity().plus(m_desiredState.getSpeeds().get()));
+        break;
+
+      case distance:
+        m_teacherIO.setVelocity(RPM.of(shot.rpm()).plus(m_desiredState.getSpeeds().get()));
         break;
     }
   }
