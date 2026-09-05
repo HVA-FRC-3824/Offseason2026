@@ -70,8 +70,8 @@ public final class Constants {
             HubHeightMeters,
             new Rotation3d());
 
-    public static final Translation2d HubForward =
-        Util.isRed() ? new Translation2d(-1, 0) : new Translation2d(1, 0);
+    public static final Translation2d RedHubForward = new Translation2d(-1, 0);
+    public static final Translation2d BlueHubForward = new Translation2d(1, 0);
 
     // For passing we want to aim towards the inside of our alliance zone
     // zone whichever is closer

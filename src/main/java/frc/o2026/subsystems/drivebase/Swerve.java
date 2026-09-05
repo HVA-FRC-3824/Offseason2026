@@ -147,6 +147,7 @@ public class Swerve extends SubsystemBase {
     driveDefault,
     pidPose,
     aim,
+    aimPass,
     aimSOTM,
     intakeAssist,
     hardStop, // XMODE
@@ -217,6 +218,26 @@ public class Swerve extends SubsystemBase {
             false);
         break;
 
+      case aimSOTM:
+        drive(
+            new ChassisSpeeds(
+                m_desiredState.speeds.vxMetersPerSecond,
+                m_desiredState.speeds.vyMetersPerSecond,
+                m_rotController.calculate(
+                    getHeading().getRadians(), RobotState.getSOTMRotTarget().getRadians())),
+            false);
+        break;
+
+      case aimPass:
+        drive(
+            new ChassisSpeeds(
+                m_desiredState.speeds.vxMetersPerSecond,
+                m_desiredState.speeds.vyMetersPerSecond,
+                m_rotController.calculate(
+                    getHeading().getRadians(), Util.isRed() ? 0 : Math.PI)),
+            false);
+        break;
+
       case intakeAssist:
         if (m_odDirection.isEmpty()) m_odDirection = m_objectDetection.directionToObject();
 
@@ -246,9 +267,6 @@ public class Swerve extends SubsystemBase {
       case hardStop:
         m_io.setModuleStates(Constants.Chassis.XishStates.toArray(SwerveModuleState[]::new));
         break;
-
-      default:
-        break;
     }
 
     if (m_desiredState != SwerveDesiredState.intakeAssist) m_odDirection = Optional.empty();
@@ -267,9 +285,9 @@ public class Swerve extends SubsystemBase {
   private void drive(ChassisSpeeds speeds, boolean fieldRelative) {
 
     Rotation2d driveHeading =
-        m_desiredState == SwerveDesiredState.pidPose
-            ? getHeading()
-            : (Util.isRed() ? getHeading() : getHeading().plus(Rotation2d.k180deg));
+        m_desiredState != SwerveDesiredState.pidPose
+            ? (Util.isRed() ? getHeading() : getHeading().plus(Rotation2d.k180deg))
+            : getHeading();
 
     var desiredStates =
         fieldRelative ? ChassisSpeeds.fromFieldRelativeSpeeds(speeds, driveHeading) : speeds;

@@ -82,8 +82,6 @@ public class RobotContainer extends SubsystemBase {
 
   private final SendableChooser<Command> m_autoChooser;
 
-  private final Supplier<Command> shootCmd;
-
   public RobotContainer() {
 
     switch (Constants.Impl) {
@@ -297,10 +295,19 @@ public class RobotContainer extends SubsystemBase {
 
     // COMMAND CREATORS
 
-    shootCmd =
+    Supplier<Command> shootCmd =
         () ->
             Commands.parallel(
-                m_flywheel.setState(FlywheelDesiredState.auto.with(m_trim)),
+                m_flywheel.setState(FlywheelDesiredState.autoScore.with(() -> m_trim)),
+                m_indexer
+                    .setState(IndexerDesiredState.on)
+                    .onlyWhile(() -> m_flywheel.isReady() && m_swerve.isAimed()),
+                m_intake.stowed());
+
+    Supplier<Command> passCmd =
+        () ->
+            Commands.parallel(
+                m_flywheel.setState(FlywheelDesiredState.autoScore.with(() -> m_trim)),
                 m_indexer
                     .setState(IndexerDesiredState.on)
                     .onlyWhile(() -> m_flywheel.isReady() && m_swerve.isAimed()),
@@ -325,14 +332,14 @@ public class RobotContainer extends SubsystemBase {
     m_driver.y().onTrue(m_swerve.toggleFieldCentricity());
 
     m_driver
-        .leftBumper()
+        .leftTrigger()
         .whileTrue(
-            shootCmd
-                .get()
-                .alongWith(m_swerve.setState(SwerveDesiredState.intakeAssist.with(getSpeeds()))));
+            Commands.parallel(
+                m_intake.deploy(),
+                m_roller.setState(RollerDesiredState.on)));
 
     m_driver
-        .leftTrigger()
+        .leftBumper()
         .whileTrue(
             Commands.parallel(
                 m_intake.deploy(),
@@ -347,6 +354,15 @@ public class RobotContainer extends SubsystemBase {
                 .repeatedly()
                 .alongWith(
                     m_swerve.setState(SwerveDesiredState.aimSOTM.with(getSpeeds())).repeatedly()));
+
+    m_driver
+        .rightBumper()
+        .onTrue(
+            passCmd
+                .get()
+                .repeatedly()
+                .alongWith(
+                    m_swerve.setState(SwerveDesiredState.aimPass.with(getSpeeds())).repeatedly()));
 
     m_operator.rightBumper().onTrue(Util.runOnce(() -> m_trim = m_trim.plus(RPM.of(50.0))));
 

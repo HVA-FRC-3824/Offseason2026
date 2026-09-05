@@ -10,7 +10,10 @@ import static edu.wpi.first.units.Units.Degrees;
 import static edu.wpi.first.units.Units.RPM;
 import static edu.wpi.first.units.Units.RotationsPerSecond;
 
+import java.util.function.Supplier;
+
 import edu.wpi.first.math.geometry.Rotation2d;
+import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.util.Units;
 import edu.wpi.first.units.measure.AngularVelocity;
@@ -35,13 +38,14 @@ public class Flywheel extends SubsystemBase {
     off,
     manual,
     setpoint,
-    auto;
+    autoPass,
+    autoScore;
 
     // This works both as trim AND as manual
-    @Getter private AngularVelocity speeds = RPM.of(0.0);
+    @Getter private Supplier<AngularVelocity> speeds = () -> RPM.of(0.0);
     @Getter private Setpoints desiredSetpoint = Setpoints.Low;
 
-    public FlywheelDesiredState with(AngularVelocity speeds) {
+    public FlywheelDesiredState with(Supplier<AngularVelocity> speeds) {
       this.speeds = speeds;
       return this;
     }
@@ -138,6 +142,17 @@ public class Flywheel extends SubsystemBase {
     var pose = RobotState.getPoseEst().toPose2d();
     var rot = RobotState.getPoseEst().getRotation();
 
+    var target = 
+        FlywheelDesiredState.autoScore == m_desiredState
+        ? Util.isRed()
+            ? Constants.Field.RedHub.getTranslation().toTranslation2d()
+            : Constants.Field.BlueHub.getTranslation().toTranslation2d()
+        : new Translation2d(
+            RobotState.getPoseEst().getY(),
+            Util.isRed()
+              ? Constants.Field.FieldWidthMeters
+              : 0.0);
+
     var shot =
         m_shotCalc.calculate(
             new ShotCalculator.ShotInputs(
@@ -145,10 +160,10 @@ public class Flywheel extends SubsystemBase {
                 ChassisSpeeds.fromRobotRelativeSpeeds(
                     RobotState.getLastMeasuredSpeeds(), pose.getRotation()),
                 RobotState.getLastMeasuredSpeeds(),
-                Util.isRed()
-                    ? Constants.Field.RedHub.getTranslation().toTranslation2d()
-                    : Constants.Field.BlueHub.getTranslation().toTranslation2d(),
-                Constants.Field.HubForward,
+                target,
+                Util.isRed() 
+                  ? Constants.Field.RedHubForward
+                  : Constants.Field.BlueHubForward,
                 0.9, // vision confidence, 0 to 1
                 rot.getMeasureY().in(Degrees),
                 rot.getMeasureX().in(Degrees)));
@@ -181,16 +196,17 @@ public class Flywheel extends SubsystemBase {
 
       case manual:
         // make sure to add trim to the with() argument when changing state
-        m_teacherIO.setVelocity(m_desiredState.getSpeeds());
+        m_teacherIO.setVelocity(m_desiredState.getSpeeds().get());
         break;
 
-      case auto:
-        m_teacherIO.setVelocity(RPM.of(shot.rpm()).plus(m_desiredState.getSpeeds()));
+      case autoPass:
+      case autoScore:
+        m_teacherIO.setVelocity(RPM.of(shot.rpm()).plus(m_desiredState.getSpeeds().get()));
         break;
 
       case setpoint:
         m_teacherIO.setVelocity(
-            m_desiredState.getDesiredSetpoint().getVelocity().plus(m_desiredState.getSpeeds()));
+            m_desiredState.getDesiredSetpoint().getVelocity().plus(m_desiredState.getSpeeds().get()));
         break;
     }
   }
