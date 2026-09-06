@@ -136,7 +136,7 @@ tasks.withType(JavaCompile) {
 project.compileJava.dependsOn(createVersionFile)
 gversion {
     srcDir       = "src/main/java/"
-    classPackage = "frc.robot"
+    classPackage = "frc.o2026"
     className    = "BuildConstants"
     dateFormat   = "yyyy-MM-dd HH:mm:ss z"
     timeZone     = "America/New_York"
@@ -188,7 +188,7 @@ spotless {
         removeUnusedImports()
         trimTrailingWhitespace()
         endWithNewline()
-        licenseHeader("// Copyright (c) 2026-2027 FRC 3824 HVA RoHawktics\n// http://github.com/HVA-FRC-3824\n//\n// Use of this source code is governed by an MIT-style license that can be found in the LICENSE file at\n// the root directory of this project.\n\n")
+        licenseHeader("// Copyright (c) 2026-2027 FRC 3824 HVA RoHawktics\n// http://github.com/HVA-FRC-3824\n//\n// Use of this source code is governed by an MIT-style license that can be found in the LICENSE file at\n// the root directory of this project. Some code may be governed by other licenses which can be found in the \"/External Licenses\" directory.\n\n")
     }
     json {
         target fileTree(".") {

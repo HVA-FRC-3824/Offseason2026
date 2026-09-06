@@ -2,7 +2,7 @@
 // http://github.com/HVA-FRC-3824
 //
 // Use of this source code is governed by an MIT-style license that can be found in the LICENSE file at
-// the root directory of this project.
+// the root directory of this project. Some code may be governed by other licenses which can be found in the "/External Licenses" directory.
 
 package frc.o2026.subsystems.drivebase;
 
@@ -107,6 +107,15 @@ public class Swerve extends SubsystemBase {
         Util::isRed,
         this // Subsystem req
         );
+
+    FollowPath.setDoubleLoggingConsumer(
+        value -> Logger.recordOutput(value.getFirst(), value.getSecond()));
+    FollowPath.setBooleanLoggingConsumer(
+        value -> Logger.recordOutput(value.getFirst(), value.getSecond()));
+    FollowPath.setPoseLoggingConsumer(
+        value -> Logger.recordOutput(value.getFirst(), value.getSecond()));
+    FollowPath.setTranslationListLoggingConsumer(
+        value -> Logger.recordOutput(value.getFirst(), value.getSecond()));
 
     m_pathBuilder =
         new FollowPath.Builder(
@@ -233,8 +242,7 @@ public class Swerve extends SubsystemBase {
             new ChassisSpeeds(
                 m_desiredState.speeds.vxMetersPerSecond,
                 m_desiredState.speeds.vyMetersPerSecond,
-                m_rotController.calculate(
-                    getHeading().getRadians(), Util.isRed() ? 0 : Math.PI)),
+                m_rotController.calculate(getHeading().getRadians(), Util.isRed() ? 0 : Math.PI)),
             false);
         break;
 

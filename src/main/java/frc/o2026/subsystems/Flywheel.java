@@ -2,7 +2,7 @@
 // http://github.com/HVA-FRC-3824
 //
 // Use of this source code is governed by an MIT-style license that can be found in the LICENSE file at
-// the root directory of this project.
+// the root directory of this project. Some code may be governed by other licenses which can be found in the "/External Licenses" directory.
 
 package frc.o2026.subsystems;
 
@@ -11,8 +11,6 @@ import static edu.wpi.first.units.Units.Feet;
 import static edu.wpi.first.units.Units.Meters;
 import static edu.wpi.first.units.Units.RPM;
 import static edu.wpi.first.units.Units.RotationsPerSecond;
-
-import java.util.function.Supplier;
 
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
@@ -32,6 +30,7 @@ import frc.shared.hardware.motor.MotorInputsAutoLogged;
 import frc.shared.rebuilt.BallSim;
 import frc.shared.rebuilt.firecontrol.ProjectileSimulator;
 import frc.shared.rebuilt.firecontrol.ShotCalculator;
+import java.util.function.Supplier;
 import lombok.Getter;
 import org.littletonrobotics.junction.Logger;
 
@@ -179,9 +178,7 @@ public class Flywheel extends SubsystemBase {
                     RobotState.getLastMeasuredSpeeds(), pose.getRotation()),
                 RobotState.getLastMeasuredSpeeds(),
                 target,
-                Util.isRed() 
-                  ? Constants.Field.RedHubForward
-                  : Constants.Field.BlueHubForward,
+                Util.isRed() ? Constants.Field.RedHubForward : Constants.Field.BlueHubForward,
                 0.9, // vision confidence, 0 to 1
                 rot.getMeasureY().in(Degrees),
                 rot.getMeasureX().in(Degrees)));
@@ -224,7 +221,10 @@ public class Flywheel extends SubsystemBase {
 
       case setpoint:
         m_teacherIO.setVelocity(
-            m_desiredState.getDesiredSetpoint().getVelocity().plus(m_desiredState.getSpeeds().get()));
+            m_desiredState
+                .getDesiredSetpoint()
+                .getVelocity()
+                .plus(m_desiredState.getSpeeds().get()));
         break;
 
       case distance:
