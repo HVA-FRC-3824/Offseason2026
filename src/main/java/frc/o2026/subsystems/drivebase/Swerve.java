@@ -26,6 +26,7 @@ import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.kinematics.SwerveModuleState;
 import edu.wpi.first.math.util.Units;
 import edu.wpi.first.wpilibj2.command.Command;
+import edu.wpi.first.wpilibj2.command.CommandScheduler;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.o2026.Configs;
 import frc.o2026.Constants;
@@ -40,6 +41,8 @@ import frc.shared.hardware.vision.poseVision.PoseCameraIO;
 import frc.shared.hardware.vision.poseVision.PoseVision;
 import java.util.List;
 import java.util.Optional;
+import java.util.function.Supplier;
+import org.littletonrobotics.junction.AutoLogOutput;
 import org.littletonrobotics.junction.Logger;
 
 public class Swerve extends SubsystemBase {
@@ -50,7 +53,6 @@ public class Swerve extends SubsystemBase {
   private ObjectVision m_objectDetection;
 
   // We use SubsystemBase::periodic to do all the PoseVision stuff
-  @SuppressWarnings("unused")
   private PoseVision m_poseVision;
 
   private Optional<Rotation2d> m_odDirection = Optional.empty();
@@ -69,6 +71,7 @@ public class Swerve extends SubsystemBase {
     m_objectDetection = new ObjectVision(odIo);
 
     m_poseVision = new PoseVision((data) -> m_io.addVisionMeasurement(data), poseCameras);
+    CommandScheduler.getInstance().schedule(m_poseVision.idle());
 
     m_rotController.enableContinuousInput(-Math.PI, Math.PI);
     m_rotController.setTolerance(Units.degreesToRadians(5.0));
@@ -145,9 +148,9 @@ public class Swerve extends SubsystemBase {
     return m_ioInputs.pose.getRotation().toRotation2d();
   }
 
-  public Command setState(SwerveDesiredState desiredState) {
+  public Command setState(SwerveDesiredState state) {
 
-    return runOnce(() -> m_desiredState = desiredState);
+    return runOnce(() -> m_desiredState = state).withName(state.toString());
   }
 
   public static enum SwerveDesiredState {
@@ -162,11 +165,11 @@ public class Swerve extends SubsystemBase {
     hardStop, // XMODE
     idle;
 
-    public ChassisSpeeds speeds = new ChassisSpeeds();
+    public Supplier<ChassisSpeeds> speeds = ChassisSpeeds::new;
     public Rotation2d rotationTarget = new Rotation2d();
     public Pose2d poseTarget = new Pose2d();
 
-    public SwerveDesiredState with(ChassisSpeeds speeds) {
+    public SwerveDesiredState with(Supplier<ChassisSpeeds> speeds) {
       this.speeds = speeds;
       return this;
     }
@@ -182,6 +185,7 @@ public class Swerve extends SubsystemBase {
     }
   }
 
+  @AutoLogOutput(key = "states/swerve")
   private SwerveDesiredState m_desiredState = SwerveDesiredState.idle;
 
   @Override
@@ -194,15 +198,15 @@ public class Swerve extends SubsystemBase {
 
     switch (m_desiredState) {
       case driveField:
-        drive(m_desiredState.speeds, true);
+        drive(m_desiredState.speeds.get(), true);
         break;
 
       case driveRobot:
-        drive(m_desiredState.speeds, false);
+        drive(m_desiredState.speeds.get(), false);
         break;
 
       case driveDefault:
-        drive(m_desiredState.speeds, m_fieldCentricity);
+        drive(m_desiredState.speeds.get(), m_fieldCentricity);
         break;
 
       case pidPose:
@@ -220,8 +224,8 @@ public class Swerve extends SubsystemBase {
       case aim:
         drive(
             new ChassisSpeeds(
-                m_desiredState.speeds.vxMetersPerSecond,
-                m_desiredState.speeds.vyMetersPerSecond,
+                m_desiredState.speeds.get().vxMetersPerSecond,
+                m_desiredState.speeds.get().vyMetersPerSecond,
                 m_rotController.calculate(
                     getHeading().getRadians(), m_desiredState.rotationTarget.getRadians())),
             false);
@@ -230,8 +234,8 @@ public class Swerve extends SubsystemBase {
       case aimSOTM:
         drive(
             new ChassisSpeeds(
-                m_desiredState.speeds.vxMetersPerSecond,
-                m_desiredState.speeds.vyMetersPerSecond,
+                m_desiredState.speeds.get().vxMetersPerSecond,
+                m_desiredState.speeds.get().vyMetersPerSecond,
                 m_rotController.calculate(
                     getHeading().getRadians(), RobotState.getSOTMRotTarget().getRadians())),
             false);
@@ -240,9 +244,9 @@ public class Swerve extends SubsystemBase {
       case aimPass:
         drive(
             new ChassisSpeeds(
-                m_desiredState.speeds.vxMetersPerSecond,
-                m_desiredState.speeds.vyMetersPerSecond,
-                m_rotController.calculate(getHeading().getRadians(), Util.isRed() ? 0 : Math.PI)),
+                m_desiredState.speeds.get().vxMetersPerSecond,
+                m_desiredState.speeds.get().vyMetersPerSecond,
+                m_rotController.calculate(getHeading().getRadians(), Util.isRed() ? 0.0 : Math.PI)),
             false);
         break;
 
@@ -255,9 +259,9 @@ public class Swerve extends SubsystemBase {
         if (m_odDirection.isPresent())
           drive(
               new ChassisSpeeds(
-                  m_desiredState.speeds.vxMetersPerSecond + assistSpeeds.getX(),
-                  m_desiredState.speeds.vyMetersPerSecond + assistSpeeds.getY(),
-                  m_desiredState.speeds.omegaRadiansPerSecond
+                  m_desiredState.speeds.get().vxMetersPerSecond + assistSpeeds.getX(),
+                  m_desiredState.speeds.get().vyMetersPerSecond + assistSpeeds.getY(),
+                  m_desiredState.speeds.get().omegaRadiansPerSecond
                       + m_rotController.calculate(
                               getHeading().getRadians(),
                               m_odDirection
@@ -274,6 +278,8 @@ public class Swerve extends SubsystemBase {
 
       case hardStop:
         m_io.setModuleStates(Constants.Chassis.XishStates.toArray(SwerveModuleState[]::new));
+        break;
+      case idle:
         break;
     }
 

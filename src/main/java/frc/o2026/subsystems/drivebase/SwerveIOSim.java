@@ -17,7 +17,7 @@ import edu.wpi.first.math.kinematics.SwerveModuleState;
 import edu.wpi.first.math.system.plant.DCMotor;
 import frc.o2026.Constants;
 import frc.o2026.RobotState;
-import frc.shared.hardware.vision.poseVision.PoseVision.VisionData;
+import frc.shared.hardware.vision.poseVision.PoseCameraIO.VisionData;
 import frc.shared.sim.SelfControlledSwerveDriveSimulation;
 import frc.shared.sim.SwerveDriveSimulation;
 import org.ironmaple.simulation.SimulatedArena;
@@ -108,13 +108,11 @@ public class SwerveIOSim implements SwerveIO {
   @Override
   public void periodic() {
 
-    RobotState.setSimRealPose(new Pose3d(m_swerveDriveSimulation.getActualPoseInSimulationWorld()));
-
     m_swerveDriveSimulation.periodic();
 
-    Pose2d simPose = m_swerveDriveSimulation.getActualPoseInSimulationWorld();
-
-    Logger.recordOutput("Sim/Pose", simPose);
+    RobotState.setSimRealPose(new Pose3d(m_swerveDriveSimulation.getActualPoseInSimulationWorld()));
+    Logger.recordOutput("Sim/Pose", RobotState.getSimRealPose());
+    Logger.recordOutput("AAAAAAAAAAAAAAtester", "fgasdsdas");
   }
 
   @Override

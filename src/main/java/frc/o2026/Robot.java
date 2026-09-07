@@ -45,7 +45,18 @@ public class Robot extends LoggedRobot {
       Logger.addDataReceiver(new NT4Publisher()); // Publish data to NetworkTables
     }
 
+    Logger.start();
+
     m_robotContainer = new RobotContainer();
+
+    BallSim.getInstance()
+        .defineRobot(
+            Constants.Chassis.TrackWidthMeters, // robotWidth
+            Constants.Chassis.WheelBaseMeters, // robotLength
+            () -> RobotState.getSimRealPose().toPose2d(), // realSimPose
+            RobotState::getSimSpeeds, // realSimSpeeds
+            RobotState::isSimIntaking, // isIntaking
+            RobotState::incFuel); // incIntake
 
     OrchestraOrchestrator.sendChooser();
   }

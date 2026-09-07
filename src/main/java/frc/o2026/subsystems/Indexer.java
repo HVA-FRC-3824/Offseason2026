@@ -12,6 +12,7 @@ import frc.o2026.Configs;
 import frc.o2026.RobotState;
 import frc.shared.hardware.motor.MotorIO;
 import frc.shared.hardware.motor.MotorInputsAutoLogged;
+import org.littletonrobotics.junction.AutoLogOutput;
 import org.littletonrobotics.junction.Logger;
 
 public class Indexer extends SubsystemBase {
@@ -34,11 +35,12 @@ public class Indexer extends SubsystemBase {
     backwards
   }
 
+  @AutoLogOutput(key = "states/indexer")
   private IndexerDesiredState m_desiredState = IndexerDesiredState.off;
 
-  public Command setState(IndexerDesiredState desiredState) {
+  public Command setState(IndexerDesiredState state) {
 
-    return runOnce(() -> m_desiredState = desiredState);
+    return runOnce(() -> m_desiredState = state).withName(state.toString());
   }
 
   @Override

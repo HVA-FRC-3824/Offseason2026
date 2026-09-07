@@ -38,6 +38,7 @@ import frc.o2026.subsystems.drivebase.SwerveIO;
 import frc.o2026.subsystems.drivebase.SwerveIOReal;
 import frc.o2026.subsystems.drivebase.SwerveIOSim;
 import frc.o2026.subsystems.drivebase.SwerveModule;
+import frc.shared.Periodical;
 import frc.shared.Util;
 import frc.shared.hardware.gyro.GyroIOPigeon;
 import frc.shared.hardware.motor.MotorIONothing;
@@ -52,11 +53,11 @@ import frc.shared.hardware.vision.poseVision.PoseCameraIOLimelight;
 import frc.shared.hardware.vision.poseVision.PoseCameraIOPhoton;
 import frc.shared.hardware.vision.poseVision.PoseCameraIOReplay;
 import frc.shared.hardware.vision.poseVision.PoseCameraIOSim;
+import java.util.function.Supplier;
 import lombok.Getter;
 import lombok.Setter;
-
-import java.util.function.Supplier;
 import org.ironmaple.simulation.SimulatedArena;
+import org.littletonrobotics.junction.AutoLogOutput;
 import org.littletonrobotics.junction.Logger;
 
 public class RobotContainer extends SubsystemBase {
@@ -77,29 +78,42 @@ public class RobotContainer extends SubsystemBase {
   private SlewRateLimiter m_yLimiter = new SlewRateLimiter(2.0);
   private SlewRateLimiter m_rotLimiter = new SlewRateLimiter(2.0);
 
-  private static enum Limiting {
+  private static enum LimitingMode {
     TrigExp,
     Linear;
-    
-    @Getter @Setter private static Limiting mode = Limiting.TrigExp;
+
+    @AutoLogOutput(key = "LimitingMode")
+    @Getter
+    @Setter
+    static LimitingMode mode = LimitingMode.TrigExp;
   }
 
   private static enum ControlMode {
     Match,
     Testing;
 
+    @AutoLogOutput(key = "ControlMode")
     static ControlMode mode = ControlMode.Match;
 
     public static void setMode(ControlMode mode) {
-        ControlMode.mode = mode;
-        Logger.recordOutput("ControlMode", mode.toString());
+      ControlMode.mode = mode;
+      Logger.recordOutput("ControlMode", mode.toString());
     }
 
-    public static boolean isMatch() { return mode == ControlMode.Match; }
-    public static boolean isTesting() { return mode == ControlMode.Testing; }
+    public static boolean isMatch() {
+      return mode == ControlMode.Match;
+    }
+
+    public static boolean isTesting() {
+      return mode == ControlMode.Testing;
+    }
   }
 
+  @AutoLogOutput(key = "trim")
   private AngularVelocity m_trim = RPM.of(0.0);
+
+  @AutoLogOutput(key = "manual")
+  private AngularVelocity m_manual = RPM.of(0.0);
 
   private final SendableChooser<Command> m_autoChooser;
 
@@ -315,7 +329,7 @@ public class RobotContainer extends SubsystemBase {
     }
 
     /// COMMAND CREATORS
-    
+
     // SHOOTING COMMANDS
 
     Supplier<Command> fireWhenReady =
@@ -325,7 +339,7 @@ public class RobotContainer extends SubsystemBase {
                     .setState(IndexerDesiredState.on)
                     .repeatedly()
                     .onlyWhile(() -> m_flywheel.isReady() && m_swerve.isAimed()),
-                m_intake.stowed().repeatedly());
+                m_intake.setState(IntakeDesiredState.stowed).repeatedly());
 
     /// AUTOS
 
@@ -335,10 +349,16 @@ public class RobotContainer extends SubsystemBase {
     /// DEFAULT COMMANDS
 
     m_swerve.setDefaultCommand(
-        m_swerve.defer(() -> m_swerve.setState(SwerveDesiredState.driveDefault.with(getSpeeds()))));
+        m_swerve
+            .setState(SwerveDesiredState.driveDefault.with(this::getSpeeds))
+            .repeatedly()
+            .withName("Drive"));
     m_flywheel.setDefaultCommand(m_flywheel.setState(FlywheelDesiredState.off));
     m_indexer.setDefaultCommand(m_indexer.setState(IndexerDesiredState.off));
     m_roller.setDefaultCommand(m_roller.setState(RollerDesiredState.off));
+
+    Periodical.addPeriodic(
+        2, () -> m_manual = RPM.of(SmartDashboard.getNumber("trim/speed", m_manual.in(RPM))));
 
     /// CONTROLLER BINDINGS
 
@@ -349,52 +369,63 @@ public class RobotContainer extends SubsystemBase {
 
     m_driver.start().onTrue(Util.runOnce(() -> ControlMode.setMode(ControlMode.Match)));
     m_driver.back().onTrue(Util.runOnce(() -> ControlMode.setMode(ControlMode.Testing)));
+
     m_operator.start().onTrue(Util.runOnce(() -> ControlMode.setMode(ControlMode.Match)));
     m_operator.back().onTrue(Util.runOnce(() -> ControlMode.setMode(ControlMode.Testing)));
 
     m_operator.a().onTrue(Util.runOnce(() -> m_trim = RPM.of(0.0)));
-    
-    SmartDashboard.putData(
-        "yUp",
-        m_swerve
-            .setState(SwerveDesiredState.driveField.with(new ChassisSpeeds(0.5, 0.0, 0.0)))
-            .repeatedly()
-            .withTimeout(Seconds.of(0.2)));
 
-    SmartDashboard.putData(
-        "yDown",
-        m_swerve
-            .setState(SwerveDesiredState.driveField.with(new ChassisSpeeds(-0.5, 0.0, 0.0)))
-            .repeatedly()
-            .withTimeout(Seconds.of(0.2)));
+    m_operator.povUp().onTrue(m_intake.setState(IntakeDesiredState.stowed));
 
-    SmartDashboard.putData(
-        "xLeft",
-        m_swerve
-            .setState(SwerveDesiredState.driveField.with(new ChassisSpeeds(0.0, -0.5, 0.0)))
-            .repeatedly()
-            .withTimeout(Seconds.of(0.2)));
+    m_operator.povDown().onTrue(m_intake.setState(IntakeDesiredState.deployed));
 
-    SmartDashboard.putData(
-        "xRight",
-        m_swerve
-            .setState(SwerveDesiredState.driveField.with(new ChassisSpeeds(0.0, 0.5, 0.0)))
-            .repeatedly()
-            .withTimeout(Seconds.of(0.2)));
+    {
+      SmartDashboard.putData(
+          "yUp",
+          m_swerve
+              .setState(SwerveDesiredState.driveField.with(() -> new ChassisSpeeds(0.5, 0.0, 0.0)))
+              .repeatedly()
+              .withTimeout(Seconds.of(0.2)));
 
-    SmartDashboard.putData(
-        "rotLeft",
-        m_swerve
-            .setState(SwerveDesiredState.driveField.with(new ChassisSpeeds(0.0, 0.0, Math.PI / 2)))
-            .repeatedly()
-            .withTimeout(Seconds.of(0.2)));
+      SmartDashboard.putData(
+          "yDown",
+          m_swerve
+              .setState(SwerveDesiredState.driveField.with(() -> new ChassisSpeeds(-0.5, 0.0, 0.0)))
+              .repeatedly()
+              .withTimeout(Seconds.of(0.2)));
 
-    SmartDashboard.putData(
-        "rotRight",
-        m_swerve
-            .setState(SwerveDesiredState.driveField.with(new ChassisSpeeds(0.0, 0.0, -Math.PI / 2)))
-            .repeatedly()
-            .withTimeout(Seconds.of(0.2)));
+      SmartDashboard.putData(
+          "xLeft",
+          m_swerve
+              .setState(SwerveDesiredState.driveField.with(() -> new ChassisSpeeds(0.0, -0.5, 0.0)))
+              .repeatedly()
+              .withTimeout(Seconds.of(0.2)));
+
+      SmartDashboard.putData(
+          "xRight",
+          m_swerve
+              .setState(SwerveDesiredState.driveField.with(() -> new ChassisSpeeds(0.0, 0.5, 0.0)))
+              .repeatedly()
+              .withTimeout(Seconds.of(0.2)));
+
+      SmartDashboard.putData(
+          "rotLeft",
+          m_swerve
+              .setState(
+                  SwerveDesiredState.driveField.with(
+                      () -> new ChassisSpeeds(0.0, 0.0, Math.PI / 2)))
+              .repeatedly()
+              .withTimeout(Seconds.of(0.2)));
+
+      SmartDashboard.putData(
+          "rotRight",
+          m_swerve
+              .setState(
+                  SwerveDesiredState.driveField.with(
+                      () -> new ChassisSpeeds(0.0, 0.0, -Math.PI / 2)))
+              .repeatedly()
+              .withTimeout(Seconds.of(0.2)));
+    }
 
     // MATCH BINDINGS
 
@@ -403,17 +434,20 @@ public class RobotContainer extends SubsystemBase {
         .and(ControlMode::isMatch)
         .whileTrue(
             Commands.parallel(
-                m_intake.deploy(),
-                m_roller.setState(RollerDesiredState.on)));
+                    m_intake.setState(IntakeDesiredState.deployed),
+                    m_roller.setState(RollerDesiredState.on))
+                .repeatedly());
 
     m_driver
         .leftBumper()
         .and(ControlMode::isMatch)
         .whileTrue(
             Commands.parallel(
-                m_intake.deploy(),
+                m_intake.setState(IntakeDesiredState.deployed),
                 m_roller.setState(RollerDesiredState.on),
-                m_swerve.setState(SwerveDesiredState.intakeAssist.with(getSpeeds())).repeatedly()));
+                m_swerve
+                    .setState(SwerveDesiredState.intakeAssist.with(this::getSpeeds))
+                    .repeatedly()));
 
     m_driver
         .rightTrigger()
@@ -423,8 +457,12 @@ public class RobotContainer extends SubsystemBase {
                 .get()
                 .repeatedly()
                 .alongWith(
-                    m_swerve.setState(SwerveDesiredState.aimSOTM.with(getSpeeds())).repeatedly(),
-                    m_flywheel.setState(FlywheelDesiredState.autoPass.with(() -> m_trim)).repeatedly()));
+                    m_swerve
+                        .setState(SwerveDesiredState.aimSOTM.with(this::getSpeeds))
+                        .repeatedly(),
+                    m_flywheel
+                        .setState(FlywheelDesiredState.autoScore.with(() -> m_trim))
+                        .repeatedly()));
 
     m_driver
         .rightBumper()
@@ -434,8 +472,12 @@ public class RobotContainer extends SubsystemBase {
                 .get()
                 .repeatedly()
                 .alongWith(
-                    m_swerve.setState(SwerveDesiredState.aimPass.with(getSpeeds())).repeatedly(),
-                    m_flywheel.setState(FlywheelDesiredState.autoScore.with(() -> m_trim)).repeatedly()));
+                    m_swerve
+                        .setState(SwerveDesiredState.aimPass.with(this::getSpeeds))
+                        .repeatedly(),
+                    m_flywheel
+                        .setState(FlywheelDesiredState.autoPass.with(() -> m_trim))
+                        .repeatedly()));
 
     m_operator
         .rightBumper()
@@ -447,40 +489,41 @@ public class RobotContainer extends SubsystemBase {
         .and(ControlMode::isMatch)
         .onTrue(Util.runOnce(() -> m_trim = m_trim.minus(RPM.of(50.0))));
 
-    
     // TEST BINDINGS
 
     m_driver
         .povUp()
-        .and(ControlMode::isMatch)
-        .onTrue(Util.runOnce(() -> m_trim = m_trim.plus(RPM.of(100.0))));
+        .and(ControlMode::isTesting)
+        .onTrue(Util.runOnce(() -> m_manual = m_manual.plus(RPM.of(100.0))));
 
     m_driver
         .povUp()
-        .and(ControlMode::isMatch)
-        .onTrue(Util.runOnce(() -> m_trim = m_trim.minus(RPM.of(100.0))));
+        .and(ControlMode::isTesting)
+        .onTrue(Util.runOnce(() -> m_manual = m_manual.minus(RPM.of(100.0))));
 
     m_driver
         .leftBumper()
         .and(ControlMode::isTesting)
-        .whileTrue(m_swerve.setState(SwerveDesiredState.aimPass.with(getSpeeds())).repeatedly());
+        .whileTrue(
+            m_swerve.setState(SwerveDesiredState.aimPass.with(this::getSpeeds)).repeatedly());
 
     m_driver
         .rightBumper()
         .and(ControlMode::isTesting)
-        .whileTrue(m_swerve.setState(SwerveDesiredState.aimSOTM.with(getSpeeds())).repeatedly());
-    
-    m_driver
-        .b()
-        .and(ControlMode::isTesting)
-        .whileTrue(fireWhenReady.get().repeatedly());
+        .whileTrue(
+            m_swerve.setState(SwerveDesiredState.aimSOTM.with(this::getSpeeds)).repeatedly());
+
+    m_driver.b().and(ControlMode::isTesting).whileTrue(fireWhenReady.get().repeatedly());
 
     m_driver
         .rightTrigger()
         .and(ControlMode::isTesting)
         .whileTrue(m_flywheel.setState(FlywheelDesiredState.distance.with(Feet.of(10))));
 
-    RPM.of(SmartDashboard.getNumber("trim/speed", m_trim.in(RPM)));
+    m_driver
+        .rightTrigger()
+        .and(ControlMode::isTesting)
+        .whileTrue(m_flywheel.setState(FlywheelDesiredState.manual.with(() -> m_manual)));
 
     // m_guitar.A().onTrue(m_swerve.drive(() -> new ChassisSpeeds(-0.5, 0.0, 0.0)));
     // m_guitar.D().onTrue(m_swerve.drive(() -> new ChassisSpeeds(0.5, 0.0, 0.0)));
@@ -494,9 +537,9 @@ public class RobotContainer extends SubsystemBase {
     //             () -> {
     //               return Commands.race(
     //                   m_swerve.setState(
-    //                                   Swerve.DesiredState.aim.with(
+    //                                   SwerveDesiredState.aim.with(
     //
-    // m_swerve.getHeading().plus(Rotation2d.k180deg))).repeatedly())
+    // m_swerve.getHeading().plus(Rotation2d.k180deg)).repeatedly())
     //                       .repeatedly(),
     //                   new WaitCommand(10));
     //             }));
@@ -529,7 +572,7 @@ public class RobotContainer extends SubsystemBase {
 
     double strafe, forwards, rot;
 
-    switch (Limiting.getMode()) {
+    switch (LimitingMode.getMode()) {
       case TrigExp:
         double angle = Math.atan2(leftY, leftX);
         double magnitude = Math.sqrt(Math.pow(leftY, 2) + Math.pow(leftX, 2));

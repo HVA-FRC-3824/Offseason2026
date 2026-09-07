@@ -8,6 +8,7 @@ package frc.o2026.subsystems.drivebase;
 
 import static edu.wpi.first.units.Units.Degrees;
 
+import edu.wpi.first.math.VecBuilder;
 import edu.wpi.first.math.estimator.SwerveDrivePoseEstimator3d;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Pose3d;
@@ -18,7 +19,7 @@ import edu.wpi.first.math.kinematics.SwerveModulePosition;
 import edu.wpi.first.math.kinematics.SwerveModuleState;
 import frc.o2026.Constants;
 import frc.shared.hardware.gyro.GyroIO;
-import frc.shared.hardware.vision.poseVision.PoseVision.VisionData;
+import frc.shared.hardware.vision.poseVision.PoseCameraIO.VisionData;
 import org.littletonrobotics.junction.Logger;
 
 /// @brief Chassis subsystem for swerve drive control
@@ -132,7 +133,13 @@ public class SwerveIOReal implements SwerveIO {
   public void addVisionMeasurement(VisionData data) {
 
     m_estimator.addVisionMeasurement(
-        data.visionMeasurement(), data.timestampSeconds(), data.stdDevs());
+        data.visionMeasurement(),
+        data.timestampSeconds(),
+        VecBuilder.fill(
+            data.stdDevs().getFirst(),
+            data.stdDevs().getSecond(),
+            data.stdDevs().getThird(),
+            data.stdDevs().getFourth()));
   }
 
   @Override

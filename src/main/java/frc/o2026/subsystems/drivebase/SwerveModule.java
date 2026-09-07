@@ -20,7 +20,7 @@ import edu.wpi.first.units.measure.Angle;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.o2026.Constants;
 import frc.shared.hardware.motor.MotorIO;
-import frc.shared.hardware.motor.MotorIO.MotorInputs;
+import frc.shared.hardware.motor.MotorInputsAutoLogged;
 import org.littletonrobotics.junction.Logger;
 import org.littletonrobotics.junction.inputs.LoggableInputs;
 
@@ -29,8 +29,8 @@ public class SwerveModule extends SubsystemBase {
   private final MotorIO m_angleMotor;
   private final CANcoder m_angleAbsoluteEncoder;
 
-  private MotorInputs m_drivingMotorInputs = new MotorInputs();
-  private MotorInputs m_angleMotorInputs = new MotorInputs();
+  private MotorInputsAutoLogged m_drivingMotorInputs = new MotorInputsAutoLogged();
+  private MotorInputsAutoLogged m_angleMotorInputs = new MotorInputsAutoLogged();
 
   private String m_moduleId;
 

@@ -35,10 +35,9 @@ public class Configs {
   public static class Vision {
 
     // The standard deviations of our vision estimated poses, which affect correction rate
-    // (Fake values. Experiment and determine estimation noise on an actual robot.)
-    public static final Matrix<N4, N1> kSingleTagStdDevs = VecBuilder.fill(4, 4, 4, 4);
+    public static final Matrix<N4, N1> kSingleTagStdDevs = VecBuilder.fill(0.1, 0.1, 4, 4);
 
-    public static final Matrix<N4, N1> kMultiTagStdDevs = VecBuilder.fill(0.4, 0.4, 0.4, 1.0);
+    public static final Matrix<N4, N1> kMultiTagStdDevs = VecBuilder.fill(0.025, 0.025, 0.4, 1.0);
   }
 
   public static final class Intake {
@@ -106,10 +105,9 @@ public class Configs {
                 .withContinuousWrap(false)
                 .withP(10.0);
 
-    public static final AngularVelocity CloseSpeed = RotationsPerSecond.of(45.0); // 90 in
-    public static final AngularVelocity MiddleSpeed = RotationsPerSecond.of(51.0); // 120 in
-    public static final AngularVelocity FieldPassSpeed = RotationsPerSecond.of(85.0);
-    public static final AngularVelocity NeutralPassSpeed = RotationsPerSecond.of(65.0);
+    public static final AngularVelocity NeutralPassSpeed = RobotBase.isSimulation()
+      ? RotationsPerSecond.of(20.0) 
+      : RotationsPerSecond.of(55.0);
 
     // as a percentage of the reference (10tps tolerance at 100tps reference)
     public static final double SpunUpTolerance = 10.0;

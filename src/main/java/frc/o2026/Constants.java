@@ -28,6 +28,7 @@ import edu.wpi.first.math.system.plant.LinearSystemId;
 import edu.wpi.first.math.util.Units;
 import edu.wpi.first.units.measure.Angle;
 import edu.wpi.first.units.measure.Distance;
+import edu.wpi.first.wpilibj.RobotBase;
 import edu.wpi.first.wpilibj.simulation.DCMotorSim;
 import edu.wpi.first.wpilibj.simulation.FlywheelSim;
 import frc.shared.hardware.vision.VisionConfig;
@@ -43,7 +44,7 @@ public final class Constants {
     Replay
   }
 
-  public static final RobotImpl Impl = RobotImpl.DevBot;
+  public static final RobotImpl Impl = RobotBase.isReal() ? RobotImpl.DevBot : RobotImpl.Sim;
 
   public static final class Field {
     /// *** Field Dimensions *** ///
@@ -253,10 +254,7 @@ public final class Constants {
         new SwerveDriveKinematics(ModulePositions);
   }
 
-  public static final class Flywheel {
-
-    // put slip stuff and launch height and launcher x and y and yuh TODO TODO TODO
-  }
+  public static final class Flywheel {}
 
   public static final class CanIds {
 

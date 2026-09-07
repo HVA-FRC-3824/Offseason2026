@@ -11,7 +11,7 @@ import edu.wpi.first.math.geometry.Pose3d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.kinematics.SwerveModulePosition;
 import edu.wpi.first.math.kinematics.SwerveModuleState;
-import frc.shared.hardware.vision.poseVision.PoseVision.VisionData;
+import frc.shared.hardware.vision.poseVision.PoseCameraIO.VisionData;
 import org.littletonrobotics.junction.AutoLog;
 
 public interface SwerveIO {

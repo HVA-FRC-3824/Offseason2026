@@ -19,8 +19,8 @@ import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.o2026.Configs;
 import frc.o2026.RobotState;
 import frc.shared.hardware.motor.MotorIO;
-import frc.shared.hardware.motor.MotorIO.MotorInputs;
 import frc.shared.hardware.motor.MotorInputsAutoLogged;
+import org.littletonrobotics.junction.AutoLogOutput;
 import org.littletonrobotics.junction.Logger;
 
 public class Intake extends SubsystemBase {
@@ -28,7 +28,7 @@ public class Intake extends SubsystemBase {
   private MotorIO m_io;
   private MotorIO m_ioFollower;
 
-  private MotorInputs m_ioInputs = new MotorInputs();
+  private MotorInputsAutoLogged m_ioInputs = new MotorInputsAutoLogged();
 
   public Intake(MotorIO io, MotorIO ioFollower) {
 
@@ -47,11 +47,14 @@ public class Intake extends SubsystemBase {
     starting
   }
 
+  @AutoLogOutput(key = "states/intake")
   private IntakeDesiredState m_desiredState = IntakeDesiredState.starting;
+
   private IntakeDesiredState m_lastState = m_desiredState;
 
   public Command setState(IntakeDesiredState state) {
-    return runOnce(() -> m_desiredState = state);
+
+    return runOnce(() -> m_desiredState = state).withName(state.toString());
   }
 
   @Override
@@ -61,7 +64,7 @@ public class Intake extends SubsystemBase {
     m_ioFollower.periodic();
 
     m_io.updateInputs(m_ioInputs);
-    Logger.processInputs("Intake", (MotorInputsAutoLogged) m_ioInputs);
+    Logger.processInputs("Intake", m_ioInputs);
 
     if (m_desiredState != m_lastState) {
       switch (m_desiredState) {

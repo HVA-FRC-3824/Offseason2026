@@ -12,7 +12,6 @@ import static edu.wpi.first.units.Units.Meters;
 import static edu.wpi.first.units.Units.RPM;
 import static edu.wpi.first.units.Units.RotationsPerSecond;
 
-import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.util.Units;
@@ -25,13 +24,14 @@ import frc.o2026.Configs;
 import frc.o2026.Constants;
 import frc.o2026.RobotState;
 import frc.shared.Util;
+import frc.shared.external.firecontrol.ProjectileSimulator;
+import frc.shared.external.firecontrol.ShotCalculator;
 import frc.shared.hardware.motor.MotorIO;
 import frc.shared.hardware.motor.MotorInputsAutoLogged;
 import frc.shared.rebuilt.BallSim;
-import frc.shared.rebuilt.firecontrol.ProjectileSimulator;
-import frc.shared.rebuilt.firecontrol.ShotCalculator;
 import java.util.function.Supplier;
 import lombok.Getter;
+import org.littletonrobotics.junction.AutoLogOutput;
 import org.littletonrobotics.junction.Logger;
 
 public class Flywheel extends SubsystemBase {
@@ -39,23 +39,16 @@ public class Flywheel extends SubsystemBase {
   public static enum FlywheelDesiredState {
     off,
     manual,
-    setpoint,
     distance,
     autoPass,
     autoScore;
 
     // This works both as trim AND as manual
     @Getter private Supplier<AngularVelocity> speeds = () -> RPM.of(0.0);
-    @Getter private Setpoints desiredSetpoint = Setpoints.Low;
     @Getter private Distance desiredDistance = Feet.of(0.0);
 
     public FlywheelDesiredState with(Supplier<AngularVelocity> speeds) {
       this.speeds = speeds;
-      return this;
-    }
-
-    public FlywheelDesiredState with(Setpoints desiredSetpoint) {
-      this.desiredSetpoint = desiredSetpoint;
       return this;
     }
 
@@ -65,6 +58,7 @@ public class Flywheel extends SubsystemBase {
     }
   }
 
+  @AutoLogOutput(key = "states/flywheel")
   private FlywheelDesiredState m_desiredState = FlywheelDesiredState.off;
 
   private MotorIO m_teacherIO;
@@ -136,7 +130,7 @@ public class Flywheel extends SubsystemBase {
 
   public Command setState(FlywheelDesiredState state) {
 
-    return runOnce(() -> m_desiredState = state);
+    return runOnce(() -> m_desiredState = state).withName(state.toString());
   }
 
   @Override
@@ -151,24 +145,9 @@ public class Flywheel extends SubsystemBase {
     var pose = RobotState.getPoseEst().toPose2d();
     var rot = RobotState.getPoseEst().getRotation();
 
-    Translation2d target = switch (m_desiredState) {
-            case autoScore -> 
-                Util.isRed()
-                    ? Constants.Field.RedHub.getTranslation().toTranslation2d()
-                    : Constants.Field.BlueHub.getTranslation().toTranslation2d();
-            case autoPass -> 
-                new Translation2d(
-                    RobotState.getPoseEst().getY(),
-                    Util.isRed()
-                        ? Constants.Field.FieldWidthMeters
-                        : 0.0);
-            default ->
-                pose.getTranslation().plus(
-                  new Translation2d(
-                    Util.isRed()
-                        ? Meters.of(-2.0)
-                        : Meters.of(2.0), Meters.of(0.0)));
-        };
+    Translation2d target = Util.isRed()
+              ? Constants.Field.RedHub.getTranslation().toTranslation2d()
+              : Constants.Field.BlueHub.getTranslation().toTranslation2d();
 
     var shot =
         m_shotCalc.calculate(
@@ -185,17 +164,20 @@ public class Flywheel extends SubsystemBase {
 
     var validShot = shot.isValid() && shot.confidence() > 50;
 
-    if (shot.driveAngle() != Rotation2d.kZero) RobotState.setSOTMRotTarget(shot.driveAngle());
+    RobotState.setSOTMRotTarget(shot.driveAngle());
+    Logger.recordOutput("sotm angle", shot.driveAngle().getDegrees());
 
     if (RobotBase.isSimulation())
       Logger.runEveryN(
           5,
           () -> {
-            if (validShot && RobotState.isSimIndexing() && RobotState.getSimFuelCount() > 0) {
-
+            if (RobotState.isSimIndexing() && RobotState.getSimFuelCount() > 0) {
+              if (!validShot && m_desiredState == FlywheelDesiredState.autoScore) {
+                return;
+              }
               RobotState.decFuel();
 
-              BallSim.getInstance().launchAtRPM(RobotState.getSimRealPose().toPose2d(), shot.rpm());
+              BallSim.getInstance().launchAtRPM(RobotState.getSimRealPose().toPose2d(), m_ioInputs.velocity.in(RPM));
             }
           });
 
@@ -215,16 +197,11 @@ public class Flywheel extends SubsystemBase {
         break;
 
       case autoPass:
-      case autoScore:
-        m_teacherIO.setVelocity(RPM.of(shot.rpm()).plus(m_desiredState.getSpeeds().get()));
+        m_teacherIO.setVelocity(Configs.Flywheel.NeutralPassSpeed.plus(m_desiredState.getSpeeds().get()));
         break;
 
-      case setpoint:
-        m_teacherIO.setVelocity(
-            m_desiredState
-                .getDesiredSetpoint()
-                .getVelocity()
-                .plus(m_desiredState.getSpeeds().get()));
+      case autoScore:
+        m_teacherIO.setVelocity(RPM.of(shot.rpm()).plus(m_desiredState.getSpeeds().get()));
         break;
 
       case distance:
@@ -237,19 +214,5 @@ public class Flywheel extends SubsystemBase {
 
     return Math.abs(m_ioInputs.lastReference - m_ioInputs.velocity.in(RotationsPerSecond))
         <= Configs.Flywheel.SpunUpTolerance;
-  }
-
-  public enum Setpoints {
-    Backwards(Configs.Flywheel.CloseSpeed.times(-1.0)),
-    Low(Configs.Flywheel.CloseSpeed),
-    Mid(Configs.Flywheel.MiddleSpeed),
-    Neutral(Configs.Flywheel.NeutralPassSpeed),
-    Field(Configs.Flywheel.FieldPassSpeed);
-
-    @Getter private AngularVelocity velocity;
-
-    private Setpoints(AngularVelocity velocity) {
-      this.velocity = velocity;
-    }
   }
 }

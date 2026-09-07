@@ -182,7 +182,7 @@ spotless {
     java {
         target fileTree(".") {
             include "src/**/*.java"
-            exclude "**/build/**", "**/build-*/**", "**/rebuilt/**"
+            exclude "**/build/**", "**/build-*/**", "**/external/**"
         }
         googleJavaFormat()
         removeUnusedImports()
