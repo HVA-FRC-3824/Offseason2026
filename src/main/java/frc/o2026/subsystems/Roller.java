@@ -76,7 +76,5 @@ public class Roller extends SubsystemBase {
     } else {
       RobotState.setSimIntaking(false);
     }
-
-    Logger.recordOutput("Sim/intaking", RobotState.isSimIntaking());
   }
 }

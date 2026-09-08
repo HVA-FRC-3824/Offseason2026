@@ -8,7 +8,6 @@ package frc.o2026.subsystems;
 
 import static edu.wpi.first.units.Units.Degrees;
 import static edu.wpi.first.units.Units.Feet;
-import static edu.wpi.first.units.Units.Meters;
 import static edu.wpi.first.units.Units.RPM;
 import static edu.wpi.first.units.Units.RotationsPerSecond;
 
@@ -145,9 +144,10 @@ public class Flywheel extends SubsystemBase {
     var pose = RobotState.getPoseEst().toPose2d();
     var rot = RobotState.getPoseEst().getRotation();
 
-    Translation2d target = Util.isRed()
-              ? Constants.Field.RedHub.getTranslation().toTranslation2d()
-              : Constants.Field.BlueHub.getTranslation().toTranslation2d();
+    Translation2d target =
+        Util.isRed()
+            ? Constants.Field.RedHub.getTranslation().toTranslation2d()
+            : Constants.Field.BlueHub.getTranslation().toTranslation2d();
 
     var shot =
         m_shotCalc.calculate(
@@ -177,7 +177,8 @@ public class Flywheel extends SubsystemBase {
               }
               RobotState.decFuel();
 
-              BallSim.getInstance().launchAtRPM(RobotState.getSimRealPose().toPose2d(), m_ioInputs.velocity.in(RPM));
+              BallSim.getInstance()
+                  .launchAtRPM(RobotState.getSimRealPose().toPose2d(), m_ioInputs.velocity.in(RPM));
             }
           });
 
@@ -197,7 +198,8 @@ public class Flywheel extends SubsystemBase {
         break;
 
       case autoPass:
-        m_teacherIO.setVelocity(Configs.Flywheel.NeutralPassSpeed.plus(m_desiredState.getSpeeds().get()));
+        m_teacherIO.setVelocity(
+            Configs.Flywheel.NeutralPassSpeed.plus(m_desiredState.getSpeeds().get()));
         break;
 
       case autoScore:

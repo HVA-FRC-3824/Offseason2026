@@ -52,8 +52,6 @@ public class Indexer extends SubsystemBase {
     Logger.processInputs("indexerBelt", m_beltIoInputs);
     Logger.processInputs("indexerKick", m_kickIoInputs);
 
-    Logger.recordOutput("Sim/indexing", RobotState.isSimIndexing());
-
     switch (m_desiredState) {
       case off:
         RobotState.setSimIndexing(false);

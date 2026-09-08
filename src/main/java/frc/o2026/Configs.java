@@ -105,12 +105,11 @@ public class Configs {
                 .withContinuousWrap(false)
                 .withP(10.0);
 
-    public static final AngularVelocity NeutralPassSpeed = RobotBase.isSimulation()
-      ? RotationsPerSecond.of(20.0) 
-      : RotationsPerSecond.of(55.0);
+    public static final AngularVelocity NeutralPassSpeed =
+        RobotBase.isSimulation() ? RotationsPerSecond.of(20.0) : RotationsPerSecond.of(55.0);
 
     // as a percentage of the reference (10tps tolerance at 100tps reference)
-    public static final double SpunUpTolerance = 10.0;
+    public static final double SpunUpTolerance = 2.0;
   }
 
   public static final class Chassis {

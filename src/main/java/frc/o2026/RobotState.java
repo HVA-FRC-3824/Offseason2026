@@ -8,6 +8,8 @@ package frc.o2026;
 
 import static edu.wpi.first.units.Units.DegreesPerSecond;
 
+import org.littletonrobotics.junction.AutoLogOutput;
+
 import edu.wpi.first.math.geometry.Pose3d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
@@ -33,14 +35,19 @@ public class RobotState {
     simFuelCount++;
   }
 
+  @AutoLogOutput(key = "sim/fuelCount")
   @Getter private static int simFuelCount = 8; // 8 preloads
 
   @Setter @Getter private static Rotation2d SOTMRotTarget = new Rotation2d();
   @Setter @Getter private static Pose3d poseEst = new Pose3d();
+  @AutoLogOutput(key = "sim/realPose")
   @Setter @Getter private static Pose3d simRealPose = new Pose3d();
+  @AutoLogOutput(key = "sim/realSpeeds")
   @Setter @Getter private static ChassisSpeeds simSpeeds = new ChassisSpeeds();
   @Setter @Getter private static AngularVelocity angularVelocity = DegreesPerSecond.of(0.0);
   @Setter @Getter private static ChassisSpeeds lastMeasuredSpeeds = new ChassisSpeeds();
+  @AutoLogOutput(key = "sim/simIntaking")
   @Setter @Getter private static boolean isSimIntaking = false;
+  @AutoLogOutput(key = "sim/simIndexing")
   @Setter @Getter private static boolean isSimIndexing = false;
 }

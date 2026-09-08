@@ -111,7 +111,6 @@ public class SwerveIOSim implements SwerveIO {
     m_swerveDriveSimulation.periodic();
 
     RobotState.setSimRealPose(new Pose3d(m_swerveDriveSimulation.getActualPoseInSimulationWorld()));
-    Logger.recordOutput("Sim/Pose", RobotState.getSimRealPose());
     Logger.recordOutput("AAAAAAAAAAAAAAtester", "fgasdsdas");
   }
 
