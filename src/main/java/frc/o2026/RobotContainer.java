@@ -97,7 +97,6 @@ public class RobotContainer extends SubsystemBase {
 
     public static void setMode(ControlMode mode) {
       ControlMode.mode = mode;
-      Logger.recordOutput("ControlMode", mode.toString());
     }
 
     public static boolean isMatch() {

@@ -25,6 +25,15 @@ import org.littletonrobotics.junction.Logger;
 
 public class Intake extends SubsystemBase {
 
+  public static enum IntakeDesiredState {
+    stowed,
+    deployed,
+    starting
+  }
+
+  @AutoLogOutput(key = "states/intake")
+  private IntakeDesiredState m_desiredState = IntakeDesiredState.starting;
+
   private MotorIO m_io;
   private MotorIO m_ioFollower;
 
@@ -40,15 +49,6 @@ public class Intake extends SubsystemBase {
 
     m_ioFollower.follow(m_io.getId(), true);
   }
-
-  public static enum IntakeDesiredState {
-    stowed,
-    deployed,
-    starting
-  }
-
-  @AutoLogOutput(key = "states/intake")
-  private IntakeDesiredState m_desiredState = IntakeDesiredState.starting;
 
   private IntakeDesiredState m_lastState = m_desiredState;
 
@@ -98,7 +98,7 @@ public class Intake extends SubsystemBase {
             new Translation3d(Inches.of(0.0), Inches.of(0.0), Meters.of(0.1)),
             new Rotation3d(Degrees.of(0.0), m_ioInputs.position, Degrees.of(0.0)));
 
-    Logger.recordOutput("Intake/VizPoz", pose);
+    Logger.recordOutput("Visualization/Intake", pose);
   }
 
   public Command resetPosAtBumper() {

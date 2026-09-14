@@ -32,6 +32,8 @@ import frc.shared.hardware.motor.MotorConfig;
 
 public class Configs {
 
+  public static final int PhoenixApplyAttempts = 3;
+
   public static class Vision {
 
     // The standard deviations of our vision estimated poses, which affect correction rate
