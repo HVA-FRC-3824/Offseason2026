@@ -165,7 +165,6 @@ public class Flywheel extends SubsystemBase {
     var validShot = shot.isValid() && shot.confidence() > 50;
 
     RobotState.setSOTMRotTarget(shot.driveAngle());
-    Logger.recordOutput("sotm angle", shot.driveAngle().getDegrees());
 
     if (RobotBase.isSimulation())
       Logger.runEveryN(
@@ -183,9 +182,6 @@ public class Flywheel extends SubsystemBase {
           });
 
     Logger.recordOutput("flywheel/isReady", isReady());
-    Logger.recordOutput("flywheel/m-velocity", m_ioInputs.velocity.in(RotationsPerSecond));
-    Logger.recordOutput("flywheel/d-velocity", m_ioInputs.lastReference);
-    Logger.recordOutput("flywheel/m-fuelCount", RobotState.getSimFuelCount());
 
     switch (m_desiredState) {
       case off:

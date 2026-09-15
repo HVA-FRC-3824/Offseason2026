@@ -115,8 +115,6 @@ public class SwerveIOReal implements SwerveIO {
   public void periodic() {
 
     m_estimator.update(m_gyroIO.getGyroRotation(), m_modulePositions);
-
-    Logger.recordOutput("Pidgeon-Output ", m_gyroIO.getGyroRotation().getMeasureZ().in(Degrees));
   }
 
   @Override
@@ -136,10 +134,10 @@ public class SwerveIOReal implements SwerveIO {
         data.visionMeasurement(),
         data.timestampSeconds(),
         VecBuilder.fill(
-            data.stdDevs().getFirst(),
-            data.stdDevs().getSecond(),
-            data.stdDevs().getThird(),
-            data.stdDevs().getFourth()));
+            data.stdDevs()[0],
+            data.stdDevs()[1],
+            data.stdDevs()[2],
+            data.stdDevs()[3]));
   }
 
   @Override

@@ -17,6 +17,15 @@ import org.littletonrobotics.junction.Logger;
 
 public class Indexer extends SubsystemBase {
 
+  public static enum IndexerDesiredState {
+    off,
+    on,
+    backwards
+  }
+
+  @AutoLogOutput(key = "states/indexer")
+  private IndexerDesiredState m_desiredState = IndexerDesiredState.off;
+
   private MotorIO m_beltIo;
   private MotorIO m_kickIo;
 
@@ -29,14 +38,7 @@ public class Indexer extends SubsystemBase {
     m_kickIo = kickIo;
   }
 
-  public static enum IndexerDesiredState {
-    off,
-    on,
-    backwards
-  }
-
-  @AutoLogOutput(key = "states/indexer")
-  private IndexerDesiredState m_desiredState = IndexerDesiredState.off;
+  
 
   public Command setState(IndexerDesiredState state) {
 

@@ -33,14 +33,6 @@ public class Roller extends SubsystemBase {
   private final MotorIO m_io;
   private final MotorInputsAutoLogged m_ioInputs = new MotorInputsAutoLogged();
 
-  private final Timer m_blockageDetector = new Timer();
-  private final Timer m_unblockDuration = new Timer();
-
-  // Time stopped to start unblocking
-  private static final Time blockTime = Seconds.of(1.0);
-  // Time unblocking to start moving again
-  private static final Time unblockingTime = Seconds.of(1.0);
-
   public Roller(MotorIO io) {
 
     m_io = io;

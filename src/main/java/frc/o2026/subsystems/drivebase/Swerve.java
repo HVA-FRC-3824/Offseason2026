@@ -47,6 +47,41 @@ import org.littletonrobotics.junction.Logger;
 
 public class Swerve extends SubsystemBase {
 
+  public static enum SwerveDesiredState {
+    driveField,
+    driveRobot,
+    driveDefault,
+    pidPose,
+    aim,
+    aimPass,
+    aimSOTM,
+    intakeAssist,
+    hardStop, // XMODE
+    idle;
+
+    public Supplier<ChassisSpeeds> speeds = ChassisSpeeds::new;
+    public Rotation2d rotationTarget = new Rotation2d();
+    public Pose2d poseTarget = new Pose2d();
+
+    public SwerveDesiredState with(Supplier<ChassisSpeeds> speeds) {
+      this.speeds = speeds;
+      return this;
+    }
+
+    public SwerveDesiredState with(Rotation2d rotationTarget) {
+      this.rotationTarget = rotationTarget;
+      return this;
+    }
+
+    public SwerveDesiredState with(Pose2d poseTarget) {
+      this.poseTarget = poseTarget;
+      return this;
+    }
+  }
+
+  @AutoLogOutput(key = "states/swerve")
+  private SwerveDesiredState m_desiredState = SwerveDesiredState.idle;
+
   private SwerveIO m_io;
   private SwerveIOInputsAutoLogged m_ioInputs = new SwerveIOInputsAutoLogged();
 
@@ -153,41 +188,6 @@ public class Swerve extends SubsystemBase {
     return runOnce(() -> m_desiredState = state).withName(state.toString());
   }
 
-  public static enum SwerveDesiredState {
-    driveField,
-    driveRobot,
-    driveDefault,
-    pidPose,
-    aim,
-    aimPass,
-    aimSOTM,
-    intakeAssist,
-    hardStop, // XMODE
-    idle;
-
-    public Supplier<ChassisSpeeds> speeds = ChassisSpeeds::new;
-    public Rotation2d rotationTarget = new Rotation2d();
-    public Pose2d poseTarget = new Pose2d();
-
-    public SwerveDesiredState with(Supplier<ChassisSpeeds> speeds) {
-      this.speeds = speeds;
-      return this;
-    }
-
-    public SwerveDesiredState with(Rotation2d rotationTarget) {
-      this.rotationTarget = rotationTarget;
-      return this;
-    }
-
-    public SwerveDesiredState with(Pose2d poseTarget) {
-      this.poseTarget = poseTarget;
-      return this;
-    }
-  }
-
-  @AutoLogOutput(key = "states/swerve")
-  private SwerveDesiredState m_desiredState = SwerveDesiredState.idle;
-
   @Override
   public void periodic() {
 
@@ -289,7 +289,6 @@ public class Swerve extends SubsystemBase {
     RobotState.setPoseEst(getPose());
 
     Logger.recordOutput("Swerve/fieldCentric", m_fieldCentricity);
-    Logger.recordOutput("Swerve/d-state", m_desiredState.toString());
     Logger.recordOutput("Swerve/m-aimed", isAimed());
     Logger.recordOutput("Swerve/m-isPID", isAtPidPose());
 

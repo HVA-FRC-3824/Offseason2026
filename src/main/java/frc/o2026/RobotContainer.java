@@ -94,10 +94,9 @@ public class RobotContainer extends SubsystemBase {
     @AutoLogOutput(key = "ControlMode")
     static ControlMode mode = ControlMode.Testing;
 
-    // public static void setMode(ControlMode mode) {
-    //   ControlMode.mode = mode;
-    //   Logger.recordOutput("ControlMode", mode.toString());
-    // }
+    public static void setMode(ControlMode mode) {
+      ControlMode.mode = mode;
+    }
 
     public static boolean isMatch() {
       return false; // mode == ControlMode.Match;

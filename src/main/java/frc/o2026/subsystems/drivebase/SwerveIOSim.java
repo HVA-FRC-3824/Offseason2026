@@ -23,7 +23,6 @@ import frc.shared.sim.SwerveDriveSimulation;
 import org.ironmaple.simulation.SimulatedArena;
 import org.ironmaple.simulation.drivesims.COTS;
 import org.ironmaple.simulation.drivesims.configs.DriveTrainSimulationConfig;
-import org.littletonrobotics.junction.Logger;
 
 public class SwerveIOSim implements SwerveIO {
 
@@ -60,8 +59,6 @@ public class SwerveIOSim implements SwerveIO {
           new SwerveDriveSimulation(
               driveTrainSimulationConfig, new Pose2d(2, 2, new Rotation2d(Math.PI))));
 
-  private boolean m_xMode = false;
-
   public SwerveIOSim() {
 
     SimulatedArena.getInstance()
@@ -79,19 +76,8 @@ public class SwerveIOSim implements SwerveIO {
   @Override
   public void driveRobotRelative(ChassisSpeeds speeds) {
 
-    // If the chassis is in x mode, than stay in x mode, ignoring the desired speeds
-    if (m_xMode) {
-      // Set the module states to x mode
-      setModuleStates((SwerveModuleState[]) Constants.Chassis.XishStates.toArray());
-
-      // Save the desired speeds for logging later
-      return;
-    }
-
     // Set the desired state for each swerve module
     m_swerveDriveSimulation.runChassisSpeeds(speeds, new Translation2d(), false, true);
-
-    Logger.recordOutput("Swerve/XMode", m_xMode);
   }
 
   @Override
@@ -111,7 +97,6 @@ public class SwerveIOSim implements SwerveIO {
     m_swerveDriveSimulation.periodic();
 
     RobotState.setSimRealPose(new Pose3d(m_swerveDriveSimulation.getActualPoseInSimulationWorld()));
-    Logger.recordOutput("AAAAAAAAAAAAAAtester", "fgasdsdas");
   }
 
   @Override
