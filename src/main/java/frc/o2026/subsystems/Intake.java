@@ -35,9 +35,6 @@ public class Intake extends SubsystemBase {
     m_io = io;
     m_ioFollower = ioFollower;
 
-    // Reset at stoweds
-    m_io.resetEncoder(Degrees.of(0.0));
-
     m_ioFollower.follow(m_io.getId(), true);
   }
 

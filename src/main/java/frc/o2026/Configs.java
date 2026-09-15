@@ -44,15 +44,17 @@ public class Configs {
 
     public static final MotorConfig PivotConfig =
         new MotorConfig()
+            .withSupplyCurrent(Amps.of(60.0))
+            .withStatorCurrent(Amps.of(80.0))
             .withInverted(true)
             .withBrakeMode(true)
             .withContinuousWrap(false)
-            .withP(0.8)
+            .withP(5.0)
             .withAccelerationLimit(RotationsPerSecondPerSecond.of(6.0))
             .withVelocityLimit(RotationsPerSecond.of(25.0));
 
     public static final Angle IntakeStowedTurns = Rotations.of(0.8);
-    public static final Angle IntakeDeployTurns = Rotations.of(10.0);
+    public static final Angle IntakeDeployTurns = Rotations.of(6.0);
   }
 
   public static final class Roller {
@@ -96,9 +98,9 @@ public class Configs {
                 .withInverted(false)
                 .withBrakeMode(false)
                 .withContinuousWrap(false)
-                .withP(0.55)
-                .withV(0.13)
-                .withA(0.99)
+                .withP(0.60)
+                .withV(0.1)
+                .withA(0.2)
             : new MotorConfig()
                 .withInverted(false)
                 .withBrakeMode(false)
@@ -142,7 +144,7 @@ public class Configs {
     public static final MotorConfig TurnConfig =
         Constants.Impl == RobotImpl.DevBot
             ? new MotorConfig()
-                .withSupplyCurrent(Amps.of(20.0))
+                .withSupplyCurrent(Amps.of(40.0))
                 .withStatorCurrent(Amps.of(40.0))
                 .withInverted(true)
                 .withBrakeMode(true)
@@ -153,13 +155,13 @@ public class Configs {
                 .withVelocityLimit(RotationsPerSecond.of(150))
                 .withAccelerationLimit(RotationsPerSecondPerSecond.of(200))
             : new MotorConfig()
-                .withSupplyCurrent(Amps.of(20.0))
+                .withSupplyCurrent(Amps.of(40.0))
                 .withStatorCurrent(Amps.of(40.0))
                 .withInverted(true)
                 .withBrakeMode(true)
                 .withContinuousWrap(true)
-                .withP(12.0)
-                .withD(0.2)
+                .withP(20.0)
+                .withD(0.0)
                 .withSensorToMechanismRatio(150.0 / 7.0)
                 .withVelocityLimit(RotationsPerSecond.of(150))
                 .withAccelerationLimit(RotationsPerSecondPerSecond.of(200));
