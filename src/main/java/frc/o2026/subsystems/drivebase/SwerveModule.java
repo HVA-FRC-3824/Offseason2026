@@ -6,6 +6,7 @@
 
 package frc.o2026.subsystems.drivebase;
 
+import static edu.wpi.first.units.Units.Degrees;
 import static edu.wpi.first.units.Units.Rotations;
 import static edu.wpi.first.units.Units.RotationsPerSecond;
 
@@ -53,10 +54,13 @@ public class SwerveModule extends SubsystemBase {
             new CANcoderConfiguration()
                 .withMagnetSensor(
                     new MagnetSensorConfigs()
-                        .withMagnetOffset(angleOffset)
+                        .withMagnetOffset(0.0)
                         .withSensorDirection(SensorDirectionValue.CounterClockwise_Positive)));
 
     m_angleMotor.resetEncoder(m_angleAbsoluteEncoder.getAbsolutePosition().getValue());
+
+    m_drivingMotor.resetEncoder(Degrees.of(0.0));
+    m_angleMotor.resetEncoder(Degrees.of(0.0));
   }
 
   @Override
@@ -82,6 +86,25 @@ public class SwerveModule extends SubsystemBase {
     if (desiredState.speedMetersPerSecond == 0.0) {
       m_drivingMotor.brake();
     }
+  }
+
+  public void resetAngleToAbsolute() {
+
+    m_angleMotor.resetEncoder(m_angleAbsoluteEncoder.getAbsolutePosition().getValue());
+  }
+
+  public void evilResetAngleToAbsolute(double forwardAngleDeg) {
+
+    m_drivingMotor.resetEncoder(Degrees.of(0));
+    m_angleMotor.resetEncoder(Degrees.of(0));
+
+    double moveDegrees =
+        -1
+            * (forwardAngleDeg
+                - (m_angleAbsoluteEncoder.getAbsolutePosition().getValue().in(Degrees)));
+
+    m_angleMotor.resetEncoder(Degrees.of(moveDegrees));
+    m_angleMotor.setPosition(Degrees.of(0));
   }
 
   public SwerveModuleState getState() {

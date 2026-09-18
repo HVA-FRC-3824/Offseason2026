@@ -384,6 +384,11 @@ public class Swerve extends SubsystemBase {
         });
   }
 
+  public Command resetAzimuths() {
+
+    return runOnce(m_io::resetAzimuths);
+  }
+
   public Command fieldCentricityOn() {
     return runOnce(() -> m_fieldCentricity = true).withName("Field Centricity On").asProxy();
   }

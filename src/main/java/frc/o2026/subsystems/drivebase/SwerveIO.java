@@ -61,4 +61,6 @@ public interface SwerveIO {
   public default void resetGyro() {}
 
   public default void periodic() {}
+
+  public default void resetAzimuths() {}
 }

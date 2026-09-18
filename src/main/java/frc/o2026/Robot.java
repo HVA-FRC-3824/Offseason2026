@@ -64,17 +64,16 @@ public class Robot extends LoggedRobot {
   @Override
   public void robotInit() {
 
-    CommandScheduler.getInstance().schedule(PathfindingCommand.warmupCommand());
-
     SmartDashboard.putData(CommandScheduler.getInstance());
+
+    CommandScheduler.getInstance()
+        .schedule(PathfindingCommand.warmupCommand(), m_robotContainer.resetAzimuths());
   }
 
   @Override
   public void robotPeriodic() {
 
     CommandScheduler.getInstance().run();
-
-    SimBattery.calculateSupplyVoltage();
   }
 
   @Override
@@ -94,6 +93,7 @@ public class Robot extends LoggedRobot {
 
     SimulatedArena.getInstance().simulationPeriodic();
     BallSim.getInstance().update();
+    SimBattery.calculateSupplyVoltage();
   }
 
   @Override

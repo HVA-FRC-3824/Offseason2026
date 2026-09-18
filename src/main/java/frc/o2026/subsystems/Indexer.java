@@ -38,8 +38,6 @@ public class Indexer extends SubsystemBase {
     m_kickIo = kickIo;
   }
 
-  
-
   public Command setState(IndexerDesiredState state) {
 
     return runOnce(() -> m_desiredState = state).withName(state.toString());

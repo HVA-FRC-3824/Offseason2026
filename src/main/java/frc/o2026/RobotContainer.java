@@ -7,7 +7,6 @@
 package frc.o2026;
 
 import static edu.wpi.first.units.Units.Feet;
-import static edu.wpi.first.units.Units.Inches;
 import static edu.wpi.first.units.Units.RPM;
 import static edu.wpi.first.units.Units.RevolutionsPerSecond;
 import static edu.wpi.first.units.Units.Seconds;
@@ -48,10 +47,7 @@ import frc.shared.hardware.motor.ctre.MotorIOSim;
 import frc.shared.hardware.motor.ctre.MotorIOTalonFX;
 import frc.shared.hardware.motor.rev.MotorIOSparkMax;
 import frc.shared.hardware.vision.objectVision.ObjectCameraIO;
-import frc.shared.hardware.vision.objectVision.ObjectCameraIOPhoton;
 import frc.shared.hardware.vision.objectVision.ObjectCameraIOSim;
-import frc.shared.hardware.vision.poseVision.PoseCameraIOLimelight;
-import frc.shared.hardware.vision.poseVision.PoseCameraIOPhoton;
 import frc.shared.hardware.vision.poseVision.PoseCameraIOReplay;
 import frc.shared.hardware.vision.poseVision.PoseCameraIOSim;
 import java.util.function.Supplier;
@@ -220,10 +216,12 @@ public class RobotContainer extends SubsystemBase {
                         Constants.CanIds.BackLeftEncoderId,
                         Constants.Chassis.BackLeftForwardsAngle),
                     new GyroIOPigeon(Constants.CanIds.PigeonGyroId)),
-                new ObjectCameraIOPhoton(Constants.Vision.BackCamConfig, Inches.of(3.0)),
-                new PoseCameraIOPhoton(Constants.Vision.FrontCamConfig),
-                new PoseCameraIOPhoton(Constants.Vision.WebCam),
-                new PoseCameraIOLimelight(Constants.Vision.LimelightOfDoomAndDespair));
+                // new ObjectCameraIOPhoton(Constants.Vision.BackCamConfig, Inches.of(3.0))
+                new ObjectCameraIO() {}
+                // new PoseCameraIOPhoton(Constants.Vision.FrontCamConfig),
+                // new PoseCameraIOPhoton(Constants.Vision.WebCam),
+                // new PoseCameraIOLimelight(Constants.Vision.LimelightOfDoomAndDespair)
+                );
 
         m_roller = new Roller(new MotorIONothing());
 
@@ -365,7 +363,7 @@ public class RobotContainer extends SubsystemBase {
     // ALL MODES
 
     m_driver.a().onTrue(m_swerve.resetGyro());
-    m_driver.y().onTrue(m_swerve.toggleFieldCentricity());
+    m_driver.y().onTrue(m_swerve.resetAzimuths());
 
     // m_driver.start().onTrue(Util.runOnce(() -> ControlMode.setMode(ControlMode.Match)));
     // m_driver.back().onTrue(Util.runOnce(() -> ControlMode.setMode(ControlMode.Testing)));
@@ -634,6 +632,11 @@ public class RobotContainer extends SubsystemBase {
         Configs.Chassis.MaximumLinear.times(strafe),
         Configs.Chassis.MaximumLinear.times(forwards),
         Configs.Chassis.MaximumAngularVelocity.times(rot));
+  }
+
+  public Command resetAzimuths() {
+
+    return m_swerve.resetAzimuths();
   }
 
   public Command getAuto() {

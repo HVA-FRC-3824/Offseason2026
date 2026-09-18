@@ -20,7 +20,6 @@ import edu.wpi.first.math.kinematics.SwerveModuleState;
 import frc.o2026.Constants;
 import frc.shared.hardware.gyro.GyroIO;
 import frc.shared.hardware.vision.poseVision.PoseCameraIO.VisionData;
-import org.littletonrobotics.junction.Logger;
 
 /// @brief Chassis subsystem for swerve drive control
 ///
@@ -134,10 +133,7 @@ public class SwerveIOReal implements SwerveIO {
         data.visionMeasurement(),
         data.timestampSeconds(),
         VecBuilder.fill(
-            data.stdDevs()[0],
-            data.stdDevs()[1],
-            data.stdDevs()[2],
-            data.stdDevs()[3]));
+            data.stdDevs()[0], data.stdDevs()[1], data.stdDevs()[2], data.stdDevs()[3]));
   }
 
   @Override
@@ -162,5 +158,17 @@ public class SwerveIOReal implements SwerveIO {
     m_frSwerveModules.setDesiredState(states[1]);
     m_blSwerveModules.setDesiredState(states[2]);
     m_brSwerveModules.setDesiredState(states[3]);
+  }
+
+  @Override
+  public void resetAzimuths() {
+
+    m_flSwerveModules.evilResetAngleToAbsolute(
+        Constants.Chassis.FrontLeftForwardsAngle.in(Degrees));
+    m_frSwerveModules.evilResetAngleToAbsolute(
+        Constants.Chassis.FrontRightForwardsAngle.in(Degrees));
+    m_blSwerveModules.evilResetAngleToAbsolute(Constants.Chassis.BackLeftForwardsAngle.in(Degrees));
+    m_brSwerveModules.evilResetAngleToAbsolute(
+        Constants.Chassis.BackRightForwardsAngle.in(Degrees));
   }
 }

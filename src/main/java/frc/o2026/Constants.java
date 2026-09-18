@@ -43,8 +43,7 @@ public final class Constants {
     Replay
   }
 
-  public static final RobotImpl Impl =
-      RobotImpl.Real; // RobotBase.isReal() ? RobotImpl.DevBot : RobotImpl.Sim;
+  public static final RobotImpl Impl = RobotImpl.Real;
 
   public static final class Field {
     /// *** Field Dimensions *** ///

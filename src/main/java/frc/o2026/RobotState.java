@@ -35,21 +35,28 @@ public class RobotState {
   }
 
   @AutoLogOutput(key = "sim/fuelCount")
-  @Getter private static int simFuelCount = 8; // 8 preloads
+  @Getter
+  private static int simFuelCount = 8; // 8 preloads
+
   @AutoLogOutput(key = "sim/realPose")
   @Setter
   @Getter
   private static Pose3d simRealPose = new Pose3d();
 
   @AutoLogOutput(key = "sim/realSpeeds")
-  @Setter @Getter private static ChassisSpeeds simSpeeds = new ChassisSpeeds();
+  @Setter
+  @Getter
+  private static ChassisSpeeds simSpeeds = new ChassisSpeeds();
+
   @AutoLogOutput(key = "sim/simIntaking")
   @Setter
   @Getter
   private static boolean isSimIntaking = false;
 
   @AutoLogOutput(key = "sim/simIndexing")
-  @Setter @Getter private static boolean isSimIndexing = false;
+  @Setter
+  @Getter
+  private static boolean isSimIndexing = false;
 
   @Setter @Getter private static Rotation2d SOTMRotTarget = new Rotation2d();
   @Setter @Getter private static Pose3d poseEst = new Pose3d();
