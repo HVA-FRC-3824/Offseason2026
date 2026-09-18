@@ -59,7 +59,6 @@ import lombok.Getter;
 import lombok.Setter;
 import org.ironmaple.simulation.SimulatedArena;
 import org.littletonrobotics.junction.AutoLogOutput;
-import org.littletonrobotics.junction.Logger;
 
 public class RobotContainer extends SubsystemBase {
 
@@ -94,18 +93,18 @@ public class RobotContainer extends SubsystemBase {
     Testing;
 
     @AutoLogOutput(key = "ControlMode")
-    static ControlMode mode = ControlMode.Match;
+    static ControlMode mode = ControlMode.Testing;
 
     public static void setMode(ControlMode mode) {
       ControlMode.mode = mode;
     }
 
     public static boolean isMatch() {
-      return mode == ControlMode.Match;
+      return false; // mode == ControlMode.Match;
     }
 
     public static boolean isTesting() {
-      return mode == ControlMode.Testing;
+      return true; // mode == ControlMode.Testing;
     }
   }
 
@@ -157,8 +156,7 @@ public class RobotContainer extends SubsystemBase {
                         Constants.CanIds.BackLeftEncoderId,
                         Constants.Chassis.BackLeftForwardsAngle),
                     new GyroIOPigeon(Constants.CanIds.PigeonGyroId)),
-                new ObjectCameraIOPhoton(Constants.Vision.BackCamConfig, Inches.of(3.0)),
-                new PoseCameraIOLimelight(Constants.Vision.LimelightOfHappinessAndLove));
+                new ObjectCameraIO() {});
 
         m_roller =
             new Roller(
@@ -176,7 +174,7 @@ public class RobotContainer extends SubsystemBase {
                     Constants.CanIds.IntakePositionLeaderMotorId, Configs.Intake.PivotConfig),
                 new MotorIOTalonFX(
                     Constants.CanIds.IntakePositionFollowerMotorId,
-                    Configs.Intake.PivotConfig.withInverted(false)));
+                    Configs.Intake.PivotConfig.withInverted(true)));
 
         m_flywheel =
             new Flywheel(
@@ -339,7 +337,8 @@ public class RobotContainer extends SubsystemBase {
                 m_indexer
                     .setState(IndexerDesiredState.on)
                     .repeatedly()
-                    .onlyWhile(() -> m_flywheel.isReady() && m_swerve.isAimed()),
+                    // .onlyWhile(() -> m_flywheel.isReady() && m_swerve.isAimed()),
+                    .onlyWhile(() -> m_flywheel.isReady()),
                 m_intake.setState(IntakeDesiredState.stowed).repeatedly());
 
     /// AUTOS
@@ -368,11 +367,11 @@ public class RobotContainer extends SubsystemBase {
     m_driver.a().onTrue(m_swerve.resetGyro());
     m_driver.y().onTrue(m_swerve.toggleFieldCentricity());
 
-    m_driver.start().onTrue(Util.runOnce(() -> ControlMode.setMode(ControlMode.Match)));
-    m_driver.back().onTrue(Util.runOnce(() -> ControlMode.setMode(ControlMode.Testing)));
+    // m_driver.start().onTrue(Util.runOnce(() -> ControlMode.setMode(ControlMode.Match)));
+    // m_driver.back().onTrue(Util.runOnce(() -> ControlMode.setMode(ControlMode.Testing)));
 
-    m_operator.start().onTrue(Util.runOnce(() -> ControlMode.setMode(ControlMode.Match)));
-    m_operator.back().onTrue(Util.runOnce(() -> ControlMode.setMode(ControlMode.Testing)));
+    // m_operator.start().onTrue(Util.runOnce(() -> ControlMode.setMode(ControlMode.Match)));
+    // m_operator.back().onTrue(Util.runOnce(() -> ControlMode.setMode(ControlMode.Testing)));
 
     m_operator.a().onTrue(Util.runOnce(() -> m_trim = RPM.of(0.0)));
 
@@ -525,33 +524,41 @@ public class RobotContainer extends SubsystemBase {
         .onTrue(Util.runOnce(() -> m_manual = m_manual.plus(RPM.of(100.0))));
 
     m_driver
-        .povUp()
+        .povDown()
         .and(ControlMode::isTesting)
         .onTrue(Util.runOnce(() -> m_manual = m_manual.minus(RPM.of(100.0))));
 
     m_driver
-        .leftBumper()
+        .povLeft()
         .and(ControlMode::isTesting)
-        .whileTrue(
-            m_swerve.setState(SwerveDesiredState.aimPass.with(this::getSpeeds)).repeatedly());
-
-    m_driver
-        .rightBumper()
-        .and(ControlMode::isTesting)
-        .whileTrue(
-            m_swerve.setState(SwerveDesiredState.aimSOTM.with(this::getSpeeds)).repeatedly());
+        .whileTrue(m_indexer.setState(IndexerDesiredState.on).repeatedly());
 
     m_driver.b().and(ControlMode::isTesting).whileTrue(fireWhenReady.get().repeatedly());
 
     m_driver
-        .rightTrigger()
+        .leftTrigger()
         .and(ControlMode::isTesting)
-        .whileTrue(m_flywheel.setState(FlywheelDesiredState.distance.with(Feet.of(10))));
+        .whileTrue(
+            m_flywheel.setState(FlywheelDesiredState.distance.with(Feet.of(10))).repeatedly());
 
     m_driver
         .rightTrigger()
         .and(ControlMode::isTesting)
-        .whileTrue(m_flywheel.setState(FlywheelDesiredState.manual.with(() -> m_manual)));
+        .whileTrue(
+            m_flywheel.setState(FlywheelDesiredState.manual.with(() -> m_manual)).repeatedly());
+
+    m_driver
+        .leftBumper()
+        .and(ControlMode::isTesting)
+        .whileTrue(m_intake.setState(IntakeDesiredState.deployed).repeatedly());
+
+    m_driver
+        .rightBumper()
+        .and(ControlMode::isTesting)
+        .whileTrue(m_intake.setState(IntakeDesiredState.stowed).repeatedly());
+
+    m_driver.rightStick().and(ControlMode::isTesting).onTrue(m_intake.resetPosAtBumper());
+    m_driver.leftStick().and(ControlMode::isTesting).onTrue(m_intake.resetPosAtStow());
 
     // m_guitar.A().onTrue(m_swerve.drive(() -> new ChassisSpeeds(-0.5, 0.0, 0.0)));
     // m_guitar.D().onTrue(m_swerve.drive(() -> new ChassisSpeeds(0.5, 0.0, 0.0)));
