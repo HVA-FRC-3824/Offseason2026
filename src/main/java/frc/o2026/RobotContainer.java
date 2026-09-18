@@ -9,6 +9,7 @@ package frc.o2026;
 import static edu.wpi.first.units.Units.Feet;
 import static edu.wpi.first.units.Units.Inches;
 import static edu.wpi.first.units.Units.RPM;
+import static edu.wpi.first.units.Units.RevolutionsPerSecond;
 import static edu.wpi.first.units.Units.Seconds;
 
 import com.pathplanner.lib.auto.AutoBuilder;
@@ -156,7 +157,8 @@ public class RobotContainer extends SubsystemBase {
                         Constants.CanIds.BackLeftEncoderId,
                         Constants.Chassis.BackLeftForwardsAngle),
                     new GyroIOPigeon(Constants.CanIds.PigeonGyroId)),
-                new ObjectCameraIOPhoton(Constants.Vision.BackCamConfig, Inches.of(3.0)));
+                new ObjectCameraIOPhoton(Constants.Vision.BackCamConfig, Inches.of(3.0)),
+                new PoseCameraIOLimelight(Constants.Vision.LimelightOfHappinessAndLove));
 
         m_roller =
             new Roller(
@@ -448,6 +450,36 @@ public class RobotContainer extends SubsystemBase {
                     .setState(SwerveDesiredState.intakeAssist.with(this::getSpeeds))
                     .repeatedly()));
 
+    // m_driver
+    //     .rightTrigger()
+    //     .and(ControlMode::isMatch)
+    //     .whileTrue(
+    //         fireWhenReady
+    //             .get()
+    //             .repeatedly()
+    //             .alongWith(
+    //                 m_swerve
+    //                     .setState(SwerveDesiredState.aimSOTM.with(this::getSpeeds))
+    //                     .repeatedly(),
+    //                 m_flywheel
+    //                     .setState(FlywheelDesiredState.autoScore.with(() -> m_trim))
+    //                     .repeatedly()));
+
+    // m_driver
+    //     .rightBumper()
+    //     .and(ControlMode::isMatch)
+    //     .whileTrue(
+    //         fireWhenReady
+    //             .get()
+    //             .repeatedly()
+    //             .alongWith(
+    //                 m_swerve
+    //                     .setState(SwerveDesiredState.aimPass.with(this::getSpeeds))
+    //                     .repeatedly(),
+    //                 m_flywheel
+    //                     .setState(FlywheelDesiredState.autoPass.with(() -> m_trim))
+    //                     .repeatedly()));
+
     m_driver
         .rightTrigger()
         .and(ControlMode::isMatch)
@@ -456,11 +488,8 @@ public class RobotContainer extends SubsystemBase {
                 .get()
                 .repeatedly()
                 .alongWith(
-                    m_swerve
-                        .setState(SwerveDesiredState.aimSOTM.with(this::getSpeeds))
-                        .repeatedly(),
                     m_flywheel
-                        .setState(FlywheelDesiredState.autoScore.with(() -> m_trim))
+                        .setState(FlywheelDesiredState.manual.with(() -> RevolutionsPerSecond.of(55).plus(m_trim)))
                         .repeatedly()));
 
     m_driver

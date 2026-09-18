@@ -137,6 +137,19 @@ public final class Constants {
                     Degrees.of(0.0), // pitch
                     Degrees.of(90.0)))); // yaw
 
+    public static final VisionConfig LimelightOfHappinessAndLove =
+        new VisionConfig(
+            "limelight-athreeg",
+            new Transform3d(
+                new Translation3d(
+                    Inches.of(-15.0), // forwards
+                    Inches.of(5.0), // right
+                    Inches.of(10.0)), // up
+                new Rotation3d(
+                    Degrees.of(00.0), // roll
+                    Degrees.of(0.0), // pitch
+                    Degrees.of(180.0)))); // yaw
+
     public static final VisionConfig FrontCamConfig =
         new VisionConfig(
             "BadCam",

@@ -90,8 +90,6 @@ public class Swerve extends SubsystemBase {
   // We use SubsystemBase::periodic to do all the PoseVision stuff
   private PoseVision m_poseVision;
 
-  private Optional<Rotation2d> m_odDirection = Optional.empty();
-
   private boolean m_fieldCentricity = false;
 
   private FollowPath.Builder m_pathBuilder;
@@ -247,33 +245,30 @@ public class Swerve extends SubsystemBase {
                 m_desiredState.speeds.get().vxMetersPerSecond,
                 m_desiredState.speeds.get().vyMetersPerSecond,
                 m_rotController.calculate(getHeading().getRadians(), Util.isRed() ? 0.0 : Math.PI)),
-            false);
+            true);
         break;
 
       case intakeAssist:
-        if (m_odDirection.isEmpty()) m_odDirection = m_objectDetection.directionToObject();
-
         var assistSpeeds =
             new Translation2d(Configs.Chassis.IntakeAssistSpeed.in(MetersPerSecond), 0.0)
                 .rotateBy(getHeading());
-        if (m_odDirection.isPresent())
-          drive(
-              new ChassisSpeeds(
-                  m_desiredState.speeds.get().vxMetersPerSecond + assistSpeeds.getX(),
-                  m_desiredState.speeds.get().vyMetersPerSecond + assistSpeeds.getY(),
-                  m_desiredState.speeds.get().omegaRadiansPerSecond
-                      + m_rotController.calculate(
+        drive(
+            new ChassisSpeeds(
+                m_desiredState.speeds.get().vxMetersPerSecond + assistSpeeds.getX(),
+                m_desiredState.speeds.get().vyMetersPerSecond + assistSpeeds.getY(),
+                m_desiredState.speeds.get().omegaRadiansPerSecond + 
+                  (m_objectDetection.hasObjects()
+                    ? m_rotController.calculate(
                               getHeading().getRadians(),
-                              m_odDirection
-                                  .get()
+                              m_objectDetection.directionToObject().orElse(getHeading())
                                   .getMeasure()
                                   .plus(
                                       Constants.Vision.FrontCamConfig.offset()
                                           .getRotation()
                                           .getMeasureZ())
                                   .in(Radians))
-                          * Configs.Chassis.IntakeAssistRotationPower),
-              m_fieldCentricity);
+                    : 0.0) * Configs.Chassis.IntakeAssistRotationPower),
+            m_fieldCentricity);
         break;
 
       case hardStop:
@@ -282,8 +277,6 @@ public class Swerve extends SubsystemBase {
       case idle:
         break;
     }
-
-    if (m_desiredState != SwerveDesiredState.intakeAssist) m_odDirection = Optional.empty();
 
     RobotState.setLastMeasuredSpeeds(getChassisSpeeds());
     RobotState.setPoseEst(getPose());
@@ -331,8 +324,6 @@ public class Swerve extends SubsystemBase {
 
     return m_objectDetection.hasObjects();
   }
-
-  // Disgusting false commands that desecrate the power of my almighty state machine
 
   public Command resetPoseCmd(Pose2d pose) {
 
