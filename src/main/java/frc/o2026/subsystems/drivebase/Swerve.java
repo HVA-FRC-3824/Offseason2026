@@ -40,7 +40,6 @@ import frc.shared.hardware.vision.objectVision.ObjectVision;
 import frc.shared.hardware.vision.poseVision.PoseCameraIO;
 import frc.shared.hardware.vision.poseVision.PoseVision;
 import java.util.List;
-import java.util.Optional;
 import java.util.function.Supplier;
 import org.littletonrobotics.junction.AutoLogOutput;
 import org.littletonrobotics.junction.Logger;
@@ -256,18 +255,21 @@ public class Swerve extends SubsystemBase {
             new ChassisSpeeds(
                 m_desiredState.speeds.get().vxMetersPerSecond + assistSpeeds.getX(),
                 m_desiredState.speeds.get().vyMetersPerSecond + assistSpeeds.getY(),
-                m_desiredState.speeds.get().omegaRadiansPerSecond + 
-                  (m_objectDetection.hasObjects()
-                    ? m_rotController.calculate(
-                              getHeading().getRadians(),
-                              m_objectDetection.directionToObject().orElse(getHeading())
-                                  .getMeasure()
-                                  .plus(
-                                      Constants.Vision.FrontCamConfig.offset()
-                                          .getRotation()
-                                          .getMeasureZ())
-                                  .in(Radians))
-                    : 0.0) * Configs.Chassis.IntakeAssistRotationPower),
+                m_desiredState.speeds.get().omegaRadiansPerSecond
+                    + (m_objectDetection.hasObjects()
+                            ? m_rotController.calculate(
+                                getHeading().getRadians(),
+                                m_objectDetection
+                                    .directionToObject()
+                                    .orElse(getHeading())
+                                    .getMeasure()
+                                    .plus(
+                                        Constants.Vision.FrontCamConfig.offset()
+                                            .getRotation()
+                                            .getMeasureZ())
+                                    .in(Radians))
+                            : 0.0)
+                        * Configs.Chassis.IntakeAssistRotationPower),
             m_fieldCentricity);
         break;
 
@@ -295,8 +297,7 @@ public class Swerve extends SubsystemBase {
             ? (Util.isRed() ? getHeading() : getHeading().plus(Rotation2d.k180deg))
             : getHeading();
 
-    var desiredStates =
-        fieldRelative ? ChassisSpeeds.fromFieldRelativeSpeeds(speeds, driveHeading) : speeds;
+    var desiredStates = ChassisSpeeds.fromFieldRelativeSpeeds(speeds, driveHeading);
 
     m_io.driveRobotRelative(desiredStates);
 

@@ -90,6 +90,9 @@ public class SwerveIOReal implements SwerveIO {
             m_modulePositions,
             new Pose3d(14.0, 7.0, 0.0, new Rotation3d(Rotation2d.k180deg)) // Initial pose
             );
+
+    // ON BOOT MUST FACE THE HECKING RED ALLAINCE
+    m_gyroIO.reset();
   }
 
   @Override

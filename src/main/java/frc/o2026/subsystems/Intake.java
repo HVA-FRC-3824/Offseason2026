@@ -13,7 +13,6 @@ import static edu.wpi.first.units.Units.Meters;
 import edu.wpi.first.math.geometry.Pose3d;
 import edu.wpi.first.math.geometry.Rotation3d;
 import edu.wpi.first.math.geometry.Translation3d;
-import edu.wpi.first.wpilibj.RobotBase;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.o2026.Configs;
@@ -57,8 +56,8 @@ public class Intake extends SubsystemBase {
   @Override
   public void periodic() {
 
-    m_io.periodic();
-    m_ioFollower.periodic();
+    // m_io.periodic();
+    // m_ioFollower.periodic();
 
     m_io.updateInputs(m_ioInputs);
     Logger.processInputs("Intake", m_ioInputs);
@@ -67,13 +66,14 @@ public class Intake extends SubsystemBase {
       switch (m_desiredState) {
         case stowed:
           RobotState.setSimIntaking(false);
-          m_io.setPosition(
-              RobotBase.isReal() ? Configs.Intake.IntakeStowedTurns : Degrees.of(90.0));
+          // m_io.setPosition(
+          //     RobotBase.isReal() ? Configs.Intake.IntakeStowedTurns : Degrees.of(90.0));
           break;
 
         case deployed:
           RobotState.setSimIntaking(true);
-          m_io.setPosition(RobotBase.isReal() ? Configs.Intake.IntakeDeployTurns : Degrees.of(0.0));
+          // m_io.setPosition(RobotBase.isReal() ? Configs.Intake.IntakeDeployTurns :
+          // Degrees.of(0.0));
           break;
 
         default:

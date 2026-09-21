@@ -63,13 +63,14 @@ public class Configs {
 
     public static final MotorConfig RollerConfig =
         new MotorConfig()
-            .withStatorCurrent(Amps.of(120.0))
+            .withStatorCurrent(Amps.of(130.0))
+            .withSupplyCurrent(Amps.of(40.0))
             .withInverted(false)
             .withBrakeMode(true)
             .withContinuousWrap(false)
-            .withP(0.2);
+            .withP(0.6);
 
-    public static final AngularVelocity IntakeTurnsPerSec = RotationsPerSecond.of(120.0);
+    public static final AngularVelocity IntakeTurnsPerSec = RotationsPerSecond.of(160.0);
   }
 
   public static final class Indexer {

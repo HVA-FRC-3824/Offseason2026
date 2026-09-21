@@ -27,7 +27,6 @@ import frc.shared.external.firecontrol.ProjectileSimulator;
 import frc.shared.external.firecontrol.ShotCalculator;
 import frc.shared.hardware.motor.MotorIO;
 import frc.shared.hardware.motor.MotorInputsAutoLogged;
-import frc.shared.rebuilt.BallSim;
 import java.util.function.Supplier;
 import lombok.Getter;
 import org.littletonrobotics.junction.AutoLogOutput;
@@ -166,20 +165,21 @@ public class Flywheel extends SubsystemBase {
 
     RobotState.setSOTMRotTarget(shot.driveAngle());
 
-    if (RobotBase.isSimulation())
-      Logger.runEveryN(
-          5,
-          () -> {
-            if (RobotState.isSimIndexing() && RobotState.getSimFuelCount() > 0) {
-              if (!validShot && m_desiredState == FlywheelDesiredState.autoScore) {
-                return;
-              }
-              RobotState.decFuel();
+    // if (RobotBase.isSimulation())
+    //   Logger.runEveryN(
+    //       5,
+    //       () -> {
+    //         if (RobotState.isSimIndexing() && RobotState.getSimFuelCount() > 0) {
+    //           if (!validShot && m_desiredState == FlywheelDesiredState.autoScore) {
+    //             return;
+    //           }
+    //           RobotState.decFuel();
 
-              BallSim.getInstance()
-                  .launchAtRPM(RobotState.getSimRealPose().toPose2d(), m_ioInputs.velocity.in(RPM));
-            }
-          });
+    //           BallSim.getInstance()
+    //               .launchAtRPM(RobotState.getSimRealPose().toPose2d(),
+    // m_ioInputs.velocity.in(RPM));
+    //         }
+    //       });
 
     Logger.recordOutput("flywheel/isReady", isReady());
 
@@ -190,7 +190,7 @@ public class Flywheel extends SubsystemBase {
 
       case manual:
         // make sure to add trim to the with() argument when changing state
-        m_teacherIO.setVelocity(m_desiredState.getSpeeds().get());
+        m_teacherIO.setVelocity(RotationsPerSecond.of(55.0));
         break;
 
       case autoPass:
